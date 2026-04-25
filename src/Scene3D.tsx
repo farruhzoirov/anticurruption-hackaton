@@ -3,7 +3,7 @@ import { OrbitControls, RoundedBox, Sparkles, Cloud, ContactShadows } from '@rea
 import { useRef, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 
-export type BuildingId = 'maktab' | 'shifoxona' | 'yollar' | 'chiroqlar' | 'bogcha';
+export type BuildingId = 'maktab' | 'shifoxona' | 'bogcha';
 export type BuildingStatus =
   | 'qurilmagan'
   | 'qurilyapti'
@@ -22,12 +22,10 @@ export type BuildingsMap = Record<BuildingId, BuildingState>;
 //  CITY CONSTANTS
 // ============================================================================
 
-// 5 plot positions on the city grid — buildings can go anywhere
+// 3 plot positions on the city grid — triangular layout
 export const PLOT_POSITIONS: [number, number, number][] = [
   [-3.5, 0, -3.5], // top-left
   [3.5, 0, -3.5],  // top-right
-  [-3.5, 0, 0],    // middle-left
-  [3.5, 0, 0],     // middle-right
   [0, 0, 3.5],     // bottom-center
 ];
 
@@ -35,8 +33,6 @@ export const PLOT_POSITIONS: [number, number, number][] = [
 const BUILDING_PALETTE: Record<BuildingId, { body: string; roof: string; window: string }> = {
   maktab: { body: '#d4a574', roof: '#7c4419', window: '#1e3a5f' },     // school: warm beige + brown roof
   shifoxona: { body: '#e8e4dc', roof: '#9b2c2c', window: '#3b6e8f' },  // hospital: off-white + dark red
-  yollar: { body: '#2d2d33', roof: '#3d3d44', window: '#c9a849' },     // road: asphalt
-  chiroqlar: { body: '#52525b', roof: '#a8a29e', window: '#fde68a' },  // lights: gray pole
   bogcha: { body: '#c2839a', roof: '#7a3650', window: '#fef3c7' },     // kindergarten: muted pink
 };
 
@@ -468,103 +464,6 @@ function FinishedHospital({ fragile }: { fragile: boolean }) {
   );
 }
 
-function FinishedRoads({ fragile }: { fragile: boolean }) {
-  const p = BUILDING_PALETTE.yollar;
-  return (
-    <group>
-      {/* Highlighted asphalt patch */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
-        <planeGeometry args={[2.4, 1.6]} />
-        <meshStandardMaterial color={p.body} />
-      </mesh>
-      {/* Lane stripes */}
-      {[-0.8, 0, 0.8].map((x, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.04, 0]}>
-          <planeGeometry args={[0.3, 0.08]} />
-          <meshStandardMaterial color={p.window} />
-        </mesh>
-      ))}
-      {/* A passing car on this segment */}
-      <PassingCar fragile={fragile} />
-      {!fragile && <Sparkles count={12} scale={[2.5, 0.5, 1.5]} size={2.4} color="#facc15" position={[0, 0.3, 0]} />}
-      {fragile && (
-        <>
-          {/* Pothole */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.5, 0.05, 0.2]}>
-            <circleGeometry args={[0.18, 16]} />
-            <meshStandardMaterial color="#1c1917" />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.4, 0.05, -0.3]}>
-            <circleGeometry args={[0.12, 16]} />
-            <meshStandardMaterial color="#1c1917" />
-          </mesh>
-        </>
-      )}
-    </group>
-  );
-}
-
-function PassingCar({ fragile }: { fragile: boolean }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (ref.current) {
-      ref.current.position.x = ((Date.now() % 5000) / 5000) * 2.4 - 1.2;
-    }
-  });
-  return (
-    <group ref={ref} position={[0, 0.2, 0]}>
-      <RoundedBox args={[0.5, 0.25, 0.3]} radius={0.05} position={[0, 0, 0]}>
-        <meshStandardMaterial color={fragile ? '#475569' : '#e11d48'} />
-      </RoundedBox>
-      <RoundedBox args={[0.3, 0.18, 0.28]} radius={0.04} position={[-0.05, 0.18, 0]}>
-        <meshStandardMaterial color={fragile ? '#1e293b' : '#9f1239'} />
-      </RoundedBox>
-    </group>
-  );
-}
-
-function FinishedLights({ fragile }: { fragile: boolean }) {
-  const p = BUILDING_PALETTE.chiroqlar;
-  const lampRef = useRef<THREE.MeshStandardMaterial>(null);
-  useFrame(() => {
-    if (lampRef.current && fragile) {
-      // Flicker for fragile lights
-      lampRef.current.emissiveIntensity = 0.2 + Math.random() * 0.6;
-    }
-  });
-  return (
-    <group>
-      {/* Pole */}
-      <mesh position={[0, 1, 0]} castShadow>
-        <cylinderGeometry args={[0.06, 0.08, 2.0, 6]} />
-        <meshStandardMaterial color={p.body} />
-      </mesh>
-      {/* Arm */}
-      <mesh position={[0.3, 1.95, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.06, 0.06]} />
-        <meshStandardMaterial color={p.body} />
-      </mesh>
-      {/* Lamp head */}
-      <mesh position={[0.6, 1.85, 0]} castShadow>
-        <sphereGeometry args={[0.18, 12, 12]} />
-        <meshStandardMaterial
-          ref={lampRef}
-          color={p.window}
-          emissive={p.window}
-          emissiveIntensity={fragile ? 0.4 : 1.2}
-        />
-      </mesh>
-      <pointLight
-        position={[0.6, 1.85, 0]}
-        intensity={fragile ? 0.3 : 0.8}
-        color={p.window}
-        distance={4}
-      />
-      {!fragile && <Sparkles count={8} scale={[1.5, 1, 1.5]} size={2} color="#fef9c3" position={[0.6, 1.85, 0]} />}
-    </group>
-  );
-}
-
 function FinishedKindergarten({ fragile }: { fragile: boolean }) {
   const p = BUILDING_PALETTE.bogcha;
   return (
@@ -598,8 +497,6 @@ function FinishedKindergarten({ fragile }: { fragile: boolean }) {
 function FinishedBuilding({ buildingId, fragile }: { buildingId: BuildingId; fragile: boolean }) {
   if (buildingId === 'maktab') return <FinishedSchool fragile={fragile} />;
   if (buildingId === 'shifoxona') return <FinishedHospital fragile={fragile} />;
-  if (buildingId === 'yollar') return <FinishedRoads fragile={fragile} />;
-  if (buildingId === 'chiroqlar') return <FinishedLights fragile={fragile} />;
   return <FinishedKindergarten fragile={fragile} />;
 }
 
@@ -617,25 +514,95 @@ function DamagedBuilding({ buildingId }: { buildingId: BuildingId }) {
   );
 }
 
+function FallingDebris({ buildingId, count = 6 }: { buildingId: BuildingId; count?: number }) {
+  const palette = BUILDING_PALETTE[buildingId];
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+
+  useFrame(() => {
+    refs.current.forEach((m, i) => {
+      if (!m) return;
+      // Each debris piece has its own falling cycle
+      const speed = 0.6 + (i * 0.13) % 0.5;
+      const period = 4000 / speed;
+      const t = ((Date.now() + i * 700) % period) / period;
+      const startX = Math.sin(i * 2.3) * 0.7;
+      const startZ = Math.cos(i * 1.8) * 0.5;
+      m.position.x = startX;
+      m.position.z = startZ;
+      m.position.y = 1.5 - t * 1.5; // fall from 1.5 to 0
+      m.rotation.x = t * Math.PI * 4;
+      m.rotation.y = t * Math.PI * 3;
+      m.scale.setScalar(t > 0.95 ? 0 : 1); // shrink at end
+    });
+  });
+
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <mesh
+          key={i}
+          ref={(el) => (refs.current[i] = el)}
+          castShadow
+        >
+          <boxGeometry args={[0.12, 0.12, 0.12]} />
+          <meshStandardMaterial color={i % 2 === 0 ? palette.body : '#3f3f46'} roughness={1} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
+function RisingDust({ count = 4 }: { count?: number }) {
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+
+  useFrame(() => {
+    refs.current.forEach((m, i) => {
+      if (!m) return;
+      const period = 3000 + i * 400;
+      const t = ((Date.now() + i * 600) % period) / period;
+      m.position.x = Math.sin(i * 2.1) * 0.5;
+      m.position.z = Math.cos(i * 1.6) * 0.4;
+      m.position.y = 0.2 + t * 1.5;
+      m.scale.setScalar(0.3 + t * 0.7);
+      const mat = m.material as THREE.MeshStandardMaterial;
+      mat.opacity = (1 - t) * 0.45;
+    });
+  });
+
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <mesh
+          key={i}
+          ref={(el) => (refs.current[i] = el)}
+        >
+          <sphereGeometry args={[0.18, 8, 8]} />
+          <meshStandardMaterial color="#78716c" transparent opacity={0.4} roughness={1} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 function RuinedBuilding({ buildingId }: { buildingId: BuildingId }) {
   const palette = BUILDING_PALETTE[buildingId];
   // Random rubble pile (deterministic by buildingId for stability)
   const rubble = useMemo(() => {
     const seed = buildingId.charCodeAt(0);
     const items: { p: [number, number, number]; r: [number, number, number]; s: number }[] = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       items.push({
         p: [
-          ((Math.sin(seed + i * 1.7) + 1) - 1) * 0.8,
-          0.05 + Math.abs(Math.sin(seed + i)) * 0.3,
-          ((Math.cos(seed + i * 2.1) + 1) - 1) * 0.8,
+          ((Math.sin(seed + i * 1.7) + 1) - 1) * 0.85,
+          0.05 + Math.abs(Math.sin(seed + i)) * 0.35,
+          ((Math.cos(seed + i * 2.1) + 1) - 1) * 0.85,
         ] as [number, number, number],
         r: [
           Math.sin(seed + i),
           Math.cos(seed + i * 1.3),
           Math.sin(seed + i * 0.7),
         ] as [number, number, number],
-        s: 0.18 + Math.abs(Math.sin(seed + i * 0.3)) * 0.15,
+        s: 0.2 + Math.abs(Math.sin(seed + i * 0.3)) * 0.18,
       });
     }
     return items;
@@ -643,13 +610,26 @@ function RuinedBuilding({ buildingId }: { buildingId: BuildingId }) {
 
   return (
     <group>
+      {/* Static rubble pile — bigger, more dramatic */}
       {rubble.map((r, i) => (
         <mesh key={i} position={r.p} rotation={r.r} castShadow>
           <boxGeometry args={[r.s, r.s, r.s]} />
-          <meshStandardMaterial color={i % 2 === 0 ? palette.body : '#3f3f46'} roughness={1} />
+          <meshStandardMaterial
+            color={i % 3 === 0 ? palette.body : i % 3 === 1 ? '#3f3f46' : '#1c1917'}
+            roughness={1}
+          />
         </mesh>
       ))}
-      <Cloud opacity={0.55} speed={0.3} segments={10} bounds={[2, 0.6, 1.5]} position={[0, 0.8, 0]} />
+
+      {/* Persistent ongoing decay — debris keeps falling */}
+      <FallingDebris buildingId={buildingId} count={5} />
+
+      {/* Continuous dust rising */}
+      <RisingDust count={4} />
+
+      {/* Persistent smoke cloud */}
+      <Cloud opacity={0.55} speed={0.3} segments={10} bounds={[2.2, 0.7, 1.6]} position={[0, 1.2, 0]} />
+      <Cloud opacity={0.35} speed={0.25} segments={8} bounds={[1.8, 0.5, 1.3]} position={[0, 1.8, 0]} />
     </group>
   );
 }

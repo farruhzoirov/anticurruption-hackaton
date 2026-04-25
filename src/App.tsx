@@ -18,7 +18,6 @@ import {
   Hammer,
 } from 'lucide-react';
 import { Scene3D, type PlotData } from './Scene3D';
-import { LifeMode } from './LifeMode';
 
 // ============================================================================
 //  AUDIO ENGINE — Web Audio API for SFX + speechSynthesis for voice
@@ -183,16 +182,17 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 //  TYPES
 // ============================================================================
 
-type BuildingId = 'maktab' | 'shifoxona' | 'yollar' | 'chiroqlar' | 'bogcha';
+type BuildingId = 'maktab' | 'shifoxona' | 'bogcha';
 type BuildingStatus = 'qurilmagan' | 'qurilyapti' | 'alo' | 'shikastlangan' | 'vayrona';
 type Phase =
   | 'start'
-  | 'idle'                 // city visible, player can click any empty plot
+  | 'idle'
   | 'chapter-intro'
   | 'pitch'
   | 'reaction'
   | 'building'
   | 'celebration'
+  | 'blessing'             // citizens emerge with thanks (honest only)
   | 'time-passes'
   | 'living-city'
   | 'incident-report'
@@ -267,16 +267,12 @@ interface Friend {
 const BUILDING_NAME: Record<BuildingId, string> = {
   maktab: 'Maktab',
   shifoxona: 'Shifoxona',
-  yollar: "Yo'llar",
-  chiroqlar: "Ko'cha chiroqlari",
   bogcha: "Bog'cha",
 };
 
 const BUILDING_EMOJI: Record<BuildingId, string> = {
   maktab: '🏫',
   shifoxona: '🏥',
-  yollar: '🛣️',
-  chiroqlar: '💡',
   bogcha: '🧸',
 };
 
@@ -291,16 +287,6 @@ const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; b
     cost: '~2 500 – 4 500 tanga',
     benefit: 'Hayotlar saqlanadi, shifo',
   },
-  yollar: {
-    tagline: "Shahar yo'llari — ulanish, harakat, savdo",
-    cost: '~1 800 – 3 500 tanga',
-    benefit: 'Tezlik, xavfsizlik, iqtisod',
-  },
-  chiroqlar: {
-    tagline: "Tunda yorug'lik — bolalar maktabdan xavfsiz qaytadi",
-    cost: '~1 200 – 2 500 tanga',
-    benefit: 'Xavfsizlik, qulaylik',
-  },
   bogcha: {
     tagline: "Eng kichik fuqarolar uchun — onalar tinch",
     cost: '~1 500 – 3 000 tanga',
@@ -308,13 +294,11 @@ const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; b
   },
 };
 
-const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'yollar', 'chiroqlar', 'bogcha'];
+const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'bogcha'];
 
 const BUILD_COMPLETE_VOICE: Record<BuildingId, string> = {
   maktab: "Tabriklaymiz! Maktab qurib bo'ldi.",
   shifoxona: 'Shifoxona ishga tushdi!',
-  yollar: "Yo'l ochildi!",
-  chiroqlar: 'Ko‘cha chiroqlari yondi!',
   bogcha: "Bog'cha tayyor!",
 };
 
@@ -354,32 +338,6 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
       "Akangiz, mening akam shifoxonada davolanardi. Yangi olingan rentgen apparati 3 marta xato natija ko'rsatdi. Akamga yurak xastaligi yo'q deyishdi, uyga qaytdi. Bir hafta keyin... uyda yiqilib tushdi. Hozir reanimatsiyada. Bu uskunalar haqiqatdan ham sertifikatlangan edimi?",
     voiceLine: "Akam noto'g'ri tashxis oldi va ahvoli og'ir.",
   },
-  yollar: {
-    buildingId: 'yollar',
-    citizen: {
-      name: 'Karim aka',
-      role: 'Taksi haydovchisi',
-      emoji: '🧔',
-      bg: 'from-stone-700 via-zinc-900 to-stone-950',
-    },
-    headline: 'Yangi yo\'lda mashinalar ag\'darilmoqda',
-    message:
-      "Akangiz, men 20 yildan beri taksi haydayman. Yangi qurilgan yo'lda — bor-yo'g'i 4 oy bo'ldi-ku — chuqurlar paydo bo'ldi, ba'zi joylarda asfalt o'pirilib tushgan. Bugun ertalab yo'lovchimning oilasi mashinada... chuqurga tushdik, uloqib ketdik. Yo'lovchimning qo'li singan, ikki bola yig'lab turibdi. Bu qanday qurilgan yo'l?",
-    voiceLine: "Yo'lda chuqurlar paydo bo'ldi, mashina ag'darildi.",
-  },
-  chiroqlar: {
-    buildingId: 'chiroqlar',
-    citizen: {
-      name: 'Yusufbek',
-      role: '12 yashar o\'quvchi',
-      emoji: '🧒',
-      bg: 'from-indigo-800 via-violet-950 to-slate-950',
-    },
-    headline: 'Qorong\'i ko\'chada bola yo\'qoldi',
-    message:
-      "Akangiz, men 6-sinfda o'qiyman. Kechqurun mashg'ulotlardan keyin maktabdan qaytaman. Yangi LED chiroqlar yondi 2 hafta — keyin so'ndi. Kecha onam meni topa olmadi: men ko'chada notanish odamlarning oldidan o'tib, qorong'ida yo'qotgan edim. Politsiya 3 soat qidirdi. Agar chiroqlar yongan bo'lsa, men topilgan bo'lardim...",
-    voiceLine: "Qorong'i ko'chada men yo'qoldim.",
-  },
   bogcha: {
     buildingId: 'bogcha',
     citizen: {
@@ -398,8 +356,6 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
 const FRESH_BUILDINGS: BuildingsMap = {
   maktab: { status: 'qurilmagan', isFragile: false },
   shifoxona: { status: 'qurilmagan', isFragile: false },
-  yollar: { status: 'qurilmagan', isFragile: false },
-  chiroqlar: { status: 'qurilmagan', isFragile: false },
   bogcha: { status: 'qurilmagan', isFragile: false },
 };
 
@@ -415,18 +371,6 @@ const NPCS: Record<string, NPC> = {
     bg: 'from-sky-700 via-blue-800 to-indigo-950',
     prop1: '🏥', prop2: '💊',
     patternEmojis: ['💉', '🩺', '🩹', '⚕️', '🧪'],
-  },
-  otabek: {
-    name: 'Otabek', role: "Yo'l qurilish ustasi", emoji: '🧑‍🔧',
-    bg: 'from-stone-700 via-zinc-800 to-stone-950',
-    prop1: '🚧', prop2: '🛠️',
-    patternEmojis: ['🚧', '🛣️', '🚜', '🛻', '🛞'],
-  },
-  madina: {
-    name: 'Madina opa', role: 'Importer', emoji: '👩‍💼',
-    bg: 'from-fuchsia-700 via-purple-800 to-violet-950',
-    prop1: '💡', prop2: '📦',
-    patternEmojis: ['💡', '📦', '🔌', '⚡', '📃'],
   },
   sardor: {
     name: 'Sardor aka', role: 'Bosh quruvchi', emoji: '🧑‍🏭',
@@ -472,41 +416,7 @@ const SCENARIOS: Scenario[] = [
     ],
   },
   {
-    id: 3, buildingId: 'yollar', npc: NPCS.otabek,
-    setting: "Yo'l ustida...",
-    pitch: "Sarmoyador, asfaltning standart qatlami 8 sm. Lekin men qishni hisoblab keldim — sizga bir taklifim bor.",
-    options: [
-      {
-        text: "Standartni saqlaymiz — 8 sm asfalt. 3500 tanga ketadi, lekin yo'l 10 yil chidaydi. Mashinalar xavfsiz yuradi.",
-        cost: 3500, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi, ish boshlayman. Sifatli ish bo'ladi. Kelgusi avlod ham minnatdor bo'ladi sizga.",
-      },
-      {
-        text: "5 sm bilan ham bo'ladi. Tekshiruvchilar yo'l yuzasini ko'radi xolos, qatlam qalinligini hech kim o'lchamaydi. 1800 tanga ketadi, qolgan 1200 — sizga. Bahor kelguncha hech kim sezmaydi.",
-        cost: 1800, personalBonus: 1200, integrityChange: -30, isCorrupt: true,
-        reaction: "Bo'pti, sarmoyador, men ham bunga rozi. Tezroq tugatamiz, pul ham keladi. Bahorgacha hammasi joyida ko'rinadi.",
-      },
-    ],
-  },
-  {
-    id: 4, buildingId: 'chiroqlar', npc: NPCS.madina,
-    setting: 'Importer ofisida...',
-    pitch: "Sarmoyador, LED chiroqlari bo'yicha ikki turdagi mahsulot bor. Sizga ochiq aytaman, qaror sizniki.",
-    options: [
-      {
-        text: "Yevropadan haqiqiy sertifikatli LED. 15 yil chidaydi, kechqurun bolalar maktabdan xavfsiz qaytadi. 2500 tanga.",
-        cost: 2500, integrityChange: 15, isCorrupt: false,
-        reaction: "Mukammal tanlov, sarmoyador. Hujjatlarni tayyorlab keltiraman. Sizning ko'cha eng yorug' bo'ladi.",
-      },
-      {
-        text: "Xitoydan arzon import. Sertifikat soxta, lekin tashqaridan farqi yo'q. 1200 tanga, qolgan 800 — sizga «haqq». Tekshiruvchilar quvvatni o'lchamaydi, ko'zga ko'rinishini ko'radi xolos.",
-        cost: 1200, personalBonus: 800, integrityChange: -30, isCorrupt: true,
-        reaction: "Yaxshi, sarmoyador. Ikkimizga ham foyda bor. Chiroqlar bir necha oy yonadi, qolgani — keyin gapiramiz.",
-      },
-    ],
-  },
-  {
-    id: 5, buildingId: 'bogcha', npc: NPCS.sardor,
+    id: 3, buildingId: 'bogcha', npc: NPCS.sardor,
     setting: "Bog'cha qurilish maydonida...",
     pitch: "Sarmoyador, bog'cha devorlari uchun armatura miqdorini hisobladim. Bir gapni aytishim kerak — bu o'rtamizdagi suhbat.",
     options: [
@@ -534,8 +444,8 @@ const CITY_TILES: Tile[] = [
   { type: 'road-h' }, { type: 'road-cross' }, { type: 'road-h' },
   { type: 'road-h' }, { type: 'road-cross' }, { type: 'road-h' },
 
-  { type: 'house', variant: 3 }, { type: 'plot', buildingId: 'yollar' }, { type: 'road-h' },
-  { type: 'road-h' }, { type: 'plot', buildingId: 'chiroqlar' }, { type: 'house', variant: 1 },
+  { type: 'house', variant: 3 }, { type: 'tree' }, { type: 'road-h' },
+  { type: 'road-h' }, { type: 'tree' }, { type: 'house', variant: 1 },
 
   { type: 'road-h' }, { type: 'road-cross' }, { type: 'road-h' },
   { type: 'road-h' }, { type: 'road-cross' }, { type: 'road-h' },
@@ -551,8 +461,6 @@ const FRIENDS: Friend[] = [
     buildings: {
       maktab: { status: 'alo', isFragile: false },
       shifoxona: { status: 'alo', isFragile: false },
-      yollar: { status: 'alo', isFragile: false },
-      chiroqlar: { status: 'alo', isFragile: false },
       bogcha: { status: 'alo', isFragile: false },
     },
   },
@@ -562,8 +470,6 @@ const FRIENDS: Friend[] = [
     buildings: {
       maktab: { status: 'vayrona', isFragile: false },
       shifoxona: { status: 'vayrona', isFragile: false },
-      yollar: { status: 'shikastlangan', isFragile: true },
-      chiroqlar: { status: 'vayrona', isFragile: false },
       bogcha: { status: 'vayrona', isFragile: false },
     },
   },
@@ -573,8 +479,6 @@ const FRIENDS: Friend[] = [
     buildings: {
       maktab: { status: 'alo', isFragile: false },
       shifoxona: { status: 'alo', isFragile: true },
-      yollar: { status: 'shikastlangan', isFragile: true },
-      chiroqlar: { status: 'alo', isFragile: false },
       bogcha: { status: 'alo', isFragile: true },
     },
   },
@@ -592,14 +496,6 @@ const MOCK_QUESTIONS: Record<BuildingId, string[]> = {
   shifoxona: [
     "Tasavvur qiling — bemor sizning onangiz. Eski uskunalar bilan unga tashxis qo'yilmoqda. Bu qaror hamon to'g'rimi?",
     "Bir insonning umri qancha turadi? Olgan pulingiz o'sha umrdan ortiqmi?",
-  ],
-  yollar: [
-    "Qishda yupqa asfalt sinadi. O'sha yo'lda sizning oilangiz mashinada ketayotgan bo'lsa-chi?",
-    "Bugun tejagan har bir tanga, ertaga kimningdir ko'z yoshiga aylanishi mumkinmi?",
-  ],
-  chiroqlar: [
-    "Qorong'i ko'chada maktabdan qaytayotgan bola — sizning singlingizmi yoki begonalarniki? Farqi bormi?",
-    "Tunda yorug'lik so'nsa, undan kim foydalanadi: yaxshi insonlarmi yoki yomonlarmi?",
   ],
   bogcha: [
     "Zilzila kelsa, kuchsiz devorlar nimaga aylanadi? Va ostida qolgan bolalarning aybi bormi?",
@@ -1504,6 +1400,159 @@ function BuildButton({
   );
 }
 
+// ============================================================================
+//  CITIZEN BLESSINGS — fuqarolar binodan chiqib rahmat aytadi (faqat halol)
+// ============================================================================
+
+interface BlessingData {
+  emojis: string[];        // 3-4 ta avatar emoji
+  text: string;
+  voiceLine: string;
+  bonus: number;           // bonus tanga
+}
+
+const BLESSINGS: Record<BuildingId, BlessingData> = {
+  maktab: {
+    emojis: ['👨‍🏫', '👧', '👦', '👨‍👩‍👧'],
+    text: "500 nafar bola va ularning ota-onalari sizga rahmat aytmoqda. Allohdan baraka tilaymiz!",
+    voiceLine: "Sizga rahmat! Bolalarimiz xavfsiz o'qiydi.",
+    bonus: 800,
+  },
+  shifoxona: {
+    emojis: ['👩‍⚕️', '👨‍⚕️', '🤰', '👴'],
+    text: "Shifokorlar va bemorlar shukur qilmoqda. Sizning ishingiz hayotlarni saqlaydi!",
+    voiceLine: "Sizga sog'lik tilaymiz! Bizning hayotimiz saqlandi.",
+    bonus: 900,
+  },
+  bogcha: {
+    emojis: ['👶', '👩', '👨‍👩‍👧', '🧸'],
+    text: "Eng kichik fuqarolar va ularning onalari sizdan rozi. Allohdan kop baraka!",
+    voiceLine: "Bolalar omonda — sizga uzoq umr!",
+    bonus: 750,
+  },
+};
+
+function CitizenBlessing({
+  buildingId, onComplete,
+}: {
+  buildingId: BuildingId;
+  onComplete: () => void;
+}) {
+  const data = BLESSINGS[buildingId];
+
+  useEffect(() => {
+    audio.victory();
+    setTimeout(() => audio.speak(data.voiceLine, { rate: 1, pitch: 1.05 }), 500);
+    const t = setTimeout(onComplete, 4500);
+    return () => clearTimeout(t);
+  }, [onComplete, data.voiceLine]);
+
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-x-0 top-24 z-30 flex justify-center px-3"
+      initial={{ y: -50, opacity: 0, scale: 0.7 }}
+      animate={{ y: 0, opacity: 1, scale: 1 }}
+      exit={{ y: -50, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+    >
+      <div className="relative max-w-2xl rounded-3xl border-2 border-emerald-400/60 bg-gradient-to-br from-emerald-700 to-emerald-950 p-5 shadow-2xl backdrop-blur">
+        {/* Sparkle background */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+          {[...Array(8)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute text-2xl"
+              initial={{
+                x: `${20 + i * 10}%`,
+                y: '110%',
+                opacity: 0.8,
+              }}
+              animate={{ y: '-20%', opacity: 0 }}
+              transition={{
+                duration: 2 + Math.random() * 1.5,
+                delay: i * 0.2,
+                repeat: Infinity,
+              }}
+            >
+              ✨
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="relative">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 rounded-full bg-yellow-400/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-yellow-100">
+              📣 Fuqarolar barakasi
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-yellow-400 px-3 py-1 text-sm font-extrabold text-slate-900">
+              <span className="text-base">🪙</span> +{data.bonus} bonus
+            </div>
+          </div>
+
+          {/* Citizen avatars emerging */}
+          <div className="mb-3 flex justify-center gap-2">
+            {data.emojis.map((emoji, i) => (
+              <motion.div
+                key={i}
+                initial={{ y: 60, opacity: 0, scale: 0 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                transition={{
+                  delay: i * 0.18,
+                  type: 'spring',
+                  stiffness: 250,
+                  damping: 14,
+                }}
+                className="text-5xl drop-shadow-2xl sm:text-6xl"
+              >
+                {emoji}
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="text-center text-base leading-relaxed text-white sm:text-lg"
+          >
+            {data.text}
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function BonusCoinBurst({ trigger }: { trigger: number }) {
+  if (!trigger) return null;
+  const N = 18;
+  return (
+    <div key={`bonus-${trigger}`} className="pointer-events-none fixed inset-0 z-40">
+      {Array.from({ length: N }).map((_, i) => {
+        const angle = (i / N) * Math.PI * 2 + Math.random() * 0.4;
+        const dist = 220 + Math.random() * 200;
+        return (
+          <motion.div
+            key={i}
+            className="absolute left-1/2 top-1/3 -translate-x-1/2 text-3xl drop-shadow-lg"
+            initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+            animate={{
+              x: Math.cos(angle) * dist,
+              y: Math.sin(angle) * dist - 40,
+              opacity: [0, 1, 1, 0],
+              scale: [0.4, 1.3, 1, 0.5],
+              rotate: 720,
+            }}
+            transition={{ duration: 1.8, ease: 'easeOut' }}
+          >
+            🪙
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CompletionBanner({ buildingId, isCorrupt }: {
   buildingId: BuildingId; isCorrupt: boolean;
 }) {
@@ -1698,26 +1747,75 @@ function DisasterModal({
 //  TIME-PASSES CINEMATIC
 // ============================================================================
 
+// Multi-year time progression — 3 stages, each more dramatic
+const TIME_STAGES: { years: number; label: string; subtitle: string; voice: string; durationMs: number }[] = [
+  {
+    years: 5,
+    label: '5 YIL KEYIN',
+    subtitle: "Shahar yashayapti. Bolalar maktabga, odamlar ishga ketmoqda...",
+    voice: "Besh yil o'tdi.",
+    durationMs: 3200,
+  },
+  {
+    years: 10,
+    label: '10 YIL KEYIN',
+    subtitle: "Birinchi yoriqlar paydo bo'ldi. Past sifatli inshootlar belgilarini ko'rsatmoqda...",
+    voice: "O'n yil o'tdi.",
+    durationMs: 3500,
+  },
+  {
+    years: 15,
+    label: '15 YIL KEYIN',
+    subtitle: "Avlodlar yashashda davom etmoqda. Qaror oqibatlari endi to'liq ko'rinadi...",
+    voice: "O'n besh yil o'tdi.",
+    durationMs: 3800,
+  },
+];
+
 function TimePassesScene({ onDone }: { onDone: () => void }) {
+  const [stageIdx, setStageIdx] = useState(0);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   useEffect(() => {
-    audio.speak("Bir yil o'tdi. Shahar yashayapti...", { rate: 0.95 });
-    const t = setTimeout(onDone, 3200);
+    if (stageIdx >= TIME_STAGES.length) {
+      onDoneRef.current();
+      return;
+    }
+    const stage = TIME_STAGES[stageIdx];
+    audio.speak(stage.voice, { rate: 0.95 });
+    const t = setTimeout(() => setStageIdx((i) => i + 1), stage.durationMs);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, [stageIdx]);
+
+  if (stageIdx >= TIME_STAGES.length) return null;
+  const stage = TIME_STAGES[stageIdx];
 
   return (
     <motion.div
+      key={stageIdx}
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
-      {/* Subtle clock background */}
+      {/* Spinning clock background */}
       <motion.div
+        key={`clock-${stageIdx}`}
         className="absolute inset-0 flex items-center justify-center text-[28rem] opacity-5"
         animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 12, ease: 'linear' }}
+        transition={{ repeat: Infinity, duration: 6 - stageIdx, ease: 'linear' }}
       >
         🕐
       </motion.div>
+
+      {/* Calendar pages flipping animation */}
+      {stageIdx > 0 && (
+        <motion.div
+          className="absolute inset-0 pointer-events-none flex items-center justify-center"
+          initial={{ opacity: 0 }} animate={{ opacity: 0.1 }}
+        >
+          <div className="text-[16rem]">📅</div>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ y: 30, opacity: 0 }}
@@ -1732,22 +1830,41 @@ function TimePassesScene({ onDone }: { onDone: () => void }) {
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ repeat: Infinity, duration: 2 }}
         >
-          VAQT O'TMOQDA
+          VAQT O'TMOQDA — BOSQICH {stageIdx + 1}/{TIME_STAGES.length}
         </motion.div>
         <motion.div
           initial={{ scale: 1.3 }} animate={{ scale: 1 }}
           transition={{ duration: 1, delay: 0.3 }}
           className="mt-3 text-6xl font-black text-white sm:text-8xl"
+          style={{
+            textShadow: stageIdx >= 2 ? '0 0 40px rgba(244,63,94,0.5)' : 'none',
+          }}
         >
-          1 YIL O'TDI
+          {stage.label}
         </motion.div>
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.6 }}
-          className="mt-4 text-base text-white/70 sm:text-xl"
+          className="mt-4 max-w-2xl mx-auto text-base text-white/70 sm:text-xl"
         >
-          Shahar yashayapti. Odamlar ishga ketishadi, bolalar maktabga boradi...
+          {stage.subtitle}
         </motion.div>
+
+        {/* Stage progress dots */}
+        <div className="mt-8 flex justify-center gap-2">
+          {TIME_STAGES.map((_, i) => (
+            <span
+              key={i}
+              className={`h-2 w-12 rounded-full transition-colors ${
+                i < stageIdx
+                  ? 'bg-yellow-400'
+                  : i === stageIdx
+                    ? 'bg-yellow-400/60 animate-pulse'
+                    : 'bg-white/15'
+              }`}
+            />
+          ))}
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -2275,13 +2392,11 @@ function IntroCinematic({ onDone }: { onDone: () => void }) {
   );
 }
 
-function StartScreen({
-  onStartMayor, onStartLife,
-}: { onStartMayor: () => void; onStartLife: () => void }) {
+function StartScreen({ onStart }: { onStart: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-10 text-center"
+      className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-5 px-4 py-10 text-center"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -2290,64 +2405,28 @@ function StartScreen({
         <div className="text-7xl sm:text-8xl">🏙️</div>
       </motion.div>
       <div className="rounded-full bg-yellow-400/20 px-4 py-1 text-xs uppercase tracking-[0.3em] text-yellow-200">
-        Hackaton · Ta'limiy o'yin · 11–13 yosh
+        Ta'limiy o'yin · 11–13 yosh
       </div>
       <h1 className="bg-gradient-to-br from-white to-yellow-300 bg-clip-text text-5xl font-black leading-none text-transparent sm:text-7xl">
         IntegrityCity
       </h1>
       <div className="-mt-3 text-xl font-extrabold text-white/90 sm:text-2xl">Halollik shahri</div>
 
-      <div className="text-center text-sm text-white/65 sm:text-base">
-        Qanday rejimda o'ynashni tanlang:
-      </div>
+      <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
+        Siz — shaharga shaxsiy mablag' kiritayotgan tadbirkor. Sizga 3 ta odam keladi va har biri taklif aytadi.
+        Halol qaror qabul qilsangiz — fuqarolar baraka tilaydi, bonus tushadi.
+        Yengil yo'lni tanlasangiz — yillar o'tib oqibatlari chiqadi.
+        Va sizning sherigingiz Otabek qarama-qarshi tanlov qiladi — kim oxirida g'oliblik ko'radi?
+      </p>
 
-      <div className="grid w-full max-w-4xl gap-4 sm:grid-cols-2">
-        {/* Mayor mode */}
-        <motion.button
-          whileHover={{ y: -6, scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { audio.unlock(); audio.click(); onStartMayor(); }}
-          className="group relative overflow-hidden rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 to-amber-700/5 p-6 text-left shadow-2xl transition hover:border-yellow-400/80 hover:bg-yellow-400/15"
-        >
-          <div className="text-6xl">💼</div>
-          <div className="mt-3 text-2xl font-black text-white">Sarmoyador rejimi</div>
-          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-yellow-300">
-            5 inshoot · 3D shahar
-          </div>
-          <div className="mt-3 text-sm leading-relaxed text-white/80">
-            Siz — shaharga shaxsiy mablag' kiritayotgan tadbirkorsiz. Pudratchilar keladi va
-            takliflar aytadi. Halol yoki yengil yo'l — siz tanlaysiz. Vaqt o'tadi, fuqarolar
-            xabar olib keladi, oqibatlar chiqadi.
-          </div>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-yellow-400 px-4 py-2 text-sm font-extrabold text-slate-900 transition group-hover:translate-x-1">
-            🎮 Sarmoyador sifatida boshlash
-            <ChevronRight className="h-4 w-4" />
-          </div>
-        </motion.button>
-
-        {/* Life mode */}
-        <motion.button
-          whileHover={{ y: -6, scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { audio.unlock(); audio.click(); onStartLife(); }}
-          className="group relative overflow-hidden rounded-3xl border-2 border-cyan-400/40 bg-gradient-to-br from-cyan-500/15 to-blue-700/5 p-6 text-left shadow-2xl transition hover:border-cyan-400/80 hover:bg-cyan-400/15"
-        >
-          <div className="text-6xl">🎒</div>
-          <div className="mt-3 text-2xl font-black text-white">Akbarning hayoti</div>
-          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-cyan-300">
-            5 dilemma · Haqiqiy hayot
-          </div>
-          <div className="mt-3 text-sm leading-relaxed text-white/80">
-            Siz — 12 yashar Akbar. Imtihon, sovg'a, otaning tanishi, do'stning siri,
-            ko'cha sotuvchisi. Korrupsiya har bosqichda — sizning tanlovingiz xarakterni
-            shakllantiradi.
-          </div>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-extrabold text-slate-900 transition group-hover:translate-x-1">
-            🎒 Akbar sifatida boshlash
-            <ChevronRight className="h-4 w-4" />
-          </div>
-        </motion.button>
-      </div>
+      <motion.button
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => { audio.unlock(); audio.click(); onStart(); }}
+        className="rounded-2xl bg-yellow-400 px-10 py-5 text-xl font-black text-slate-900 shadow-2xl transition hover:bg-yellow-300"
+      >
+        🎮 O'yinni boshlash
+      </motion.button>
 
       <div className="flex items-center gap-2 text-xs text-white/55">
         <MessageCircle className="h-3.5 w-3.5" /> Diqqat bilan o'qing — har gap ahamiyatga ega.
@@ -2373,9 +2452,12 @@ function Stat({ icon, label, value, accent }: {
 
 function GameOverScreen({
   buildings, history, budget, integrity, personalEarnings, onRestart,
+  otabekBuildings, otabekIntegrity, otabekBudget, otabekEarnings,
 }: {
   buildings: BuildingsMap; history: HistoryEntry[]; budget: number; integrity: number;
   personalEarnings: number; onRestart: () => void;
+  otabekBuildings: BuildingsMap; otabekIntegrity: number; otabekBudget: number;
+  otabekEarnings: number;
 }) {
   const all = Object.values(buildings);
   const ruined = all.filter((b) => b.status === 'vayrona').length;
@@ -2475,6 +2557,18 @@ function GameOverScreen({
         </div>
       </div>
 
+      {/* RIVAL COMPARISON — your city vs Otabek's */}
+      <RivalComparison
+        myBuildings={buildings}
+        myIntegrity={integrity}
+        myBudget={budget}
+        myEarnings={personalEarnings}
+        otBuildings={otabekBuildings}
+        otIntegrity={otabekIntegrity}
+        otBudget={otabekBudget}
+        otEarnings={otabekEarnings}
+      />
+
       <motion.button
         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
         onClick={() => { audio.click(); onRestart(); }}
@@ -2482,6 +2576,165 @@ function GameOverScreen({
       >
         <RotateCcw className="h-5 w-5" /> Qaytadan boshlash
       </motion.button>
+    </motion.div>
+  );
+}
+
+// ============================================================================
+//  RIVAL COMPARISON PANEL
+// ============================================================================
+
+function MiniCity({
+  buildings, label, sublabel,
+}: {
+  buildings: BuildingsMap;
+  label: string;
+  sublabel: string;
+}) {
+  const ids: BuildingId[] = ['maktab', 'shifoxona', 'bogcha'];
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-yellow-300">
+        {label}
+      </div>
+      <div className="mb-3 text-sm font-extrabold text-white">{sublabel}</div>
+      <div className="flex flex-wrap gap-2">
+        {ids.map((id) => {
+          const b = buildings[id];
+          const status = b.status;
+          const bg =
+            status === 'alo' && !b.isFragile ? 'bg-emerald-500/20 border-emerald-400/40'
+              : status === 'alo' && b.isFragile ? 'bg-amber-500/20 border-amber-400/40'
+              : status === 'shikastlangan' ? 'bg-amber-500/20 border-amber-400/40'
+              : status === 'vayrona' ? 'bg-rose-500/20 border-rose-400/40'
+              : 'bg-slate-700/30 border-white/10';
+          const emoji =
+            status === 'qurilmagan' ? '🚧'
+              : status === 'vayrona' ? '💥'
+              : BUILDING_EMOJI[id];
+          return (
+            <div
+              key={id}
+              className={`flex h-14 w-14 items-center justify-center rounded-xl border-2 text-2xl ${bg} ${status === 'vayrona' ? 'animate-pulse' : ''}`}
+              title={`${BUILDING_NAME[id]} — ${status}`}
+            >
+              {emoji}
+              {b.isFragile && status === 'alo' && (
+                <span className="absolute mt-8 text-[10px]">💨</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RivalComparison({
+  myBuildings, myIntegrity, myBudget, myEarnings,
+  otBuildings, otIntegrity, otBudget, otEarnings,
+}: {
+  myBuildings: BuildingsMap; myIntegrity: number; myBudget: number; myEarnings: number;
+  otBuildings: BuildingsMap; otIntegrity: number; otBudget: number; otEarnings: number;
+}) {
+  const myRuined = Object.values(myBuildings).filter((b) => b.status === 'vayrona').length;
+  const myGood = Object.values(myBuildings).filter((b) => b.status === 'alo' && !b.isFragile).length;
+  const otRuined = Object.values(otBuildings).filter((b) => b.status === 'vayrona').length;
+  const otGood = Object.values(otBuildings).filter((b) => b.status === 'alo' && !b.isFragile).length;
+
+  const myTotal = myBudget + myEarnings;
+  const otTotal = otBudget + otEarnings;
+
+  // Verdict — who's better off long-term
+  let verdict = '';
+  let verdictTone = '';
+  if (myIntegrity > otIntegrity + 20 && myRuined < otRuined) {
+    verdict = "Otabek bugungi pulni oldi — lekin sizning shahringiz davom etadi.";
+    verdictTone = 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
+  } else if (otIntegrity > myIntegrity + 20 && otRuined < myRuined) {
+    verdict = "Otabek halol qoldi. Yillar o'tib, uning shahri yashayapti — sizniki qulagan.";
+    verdictTone = 'border-rose-400/40 bg-rose-500/10 text-rose-200';
+  } else {
+    verdict = "Ikkalangizda ham ozgina farq bor — lekin har bir tanlov muhim.";
+    verdictTone = 'border-amber-400/40 bg-amber-500/10 text-amber-200';
+  }
+
+  return (
+    <motion.div
+      initial={{ y: 30, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.4, duration: 0.6 }}
+      className="mt-6 rounded-3xl border-2 border-white/10 bg-gradient-to-br from-slate-900 to-slate-950 p-5 shadow-2xl"
+    >
+      <div className="mb-4 flex items-center gap-3">
+        <div className="text-4xl">⚖️</div>
+        <div>
+          <div className="text-xs uppercase tracking-widest text-white/60">
+            Solishtirish — siz va sherigingiz
+          </div>
+          <div className="text-2xl font-black text-white">15 yil keyin</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <MiniCity
+          buildings={myBuildings}
+          label="🧑 SIZNING SHAHRINGIZ"
+          sublabel={
+            myIntegrity >= 70 ? 'Halol va mustahkam'
+              : myIntegrity >= 40 ? "Aralash holat"
+              : 'Vayron va qorong\'i'
+          }
+        />
+        <MiniCity
+          buildings={otBuildings}
+          label="🧔 OTABEK SHAHRI"
+          sublabel={
+            otIntegrity >= 70 ? 'Halol va mustahkam'
+              : otIntegrity >= 40 ? "Aralash holat"
+              : 'Vayron va qorong\'i'
+          }
+        />
+      </div>
+
+      <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+        <div className="rounded-xl bg-black/30 p-3">
+          <div className="text-xs font-bold text-white/60">SIZ</div>
+          <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
+            <span className="text-white/80">🛡️ {Math.round(myIntegrity)}</span>
+            <span className="text-emerald-300">✓ {myGood}</span>
+            <span className="text-rose-300">💥 {myRuined}</span>
+          </div>
+          <div className="mt-2 font-mono text-base font-extrabold text-yellow-300">
+            💰 {myTotal.toLocaleString('en-US').replace(/,/g, ' ')} tanga
+          </div>
+          {myEarnings > 0 && (
+            <div className="text-[10px] text-rose-300">
+              ({myEarnings.toLocaleString('en-US').replace(/,/g, ' ')} «konvert»dan)
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl bg-black/30 p-3">
+          <div className="text-xs font-bold text-white/60">OTABEK</div>
+          <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
+            <span className="text-white/80">🛡️ {Math.round(otIntegrity)}</span>
+            <span className="text-emerald-300">✓ {otGood}</span>
+            <span className="text-rose-300">💥 {otRuined}</span>
+          </div>
+          <div className="mt-2 font-mono text-base font-extrabold text-yellow-300">
+            💰 {otTotal.toLocaleString('en-US').replace(/,/g, ' ')} tanga
+          </div>
+          {otEarnings > 0 && (
+            <div className="text-[10px] text-rose-300">
+              ({otEarnings.toLocaleString('en-US').replace(/,/g, ' ')} «konvert»dan)
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={`mt-4 rounded-2xl border p-4 text-center text-sm font-medium ${verdictTone}`}>
+        {verdict}
+      </div>
     </motion.div>
   );
 }
@@ -2572,11 +2825,8 @@ function SuggestionsPanel({
 const CONSTRUCTION_MS = 3500;
 const CELEBRATION_MS = 1900;
 
-type GameMode = 'menu' | 'mayor' | 'life';
-
 export default function App() {
   const [introDone, setIntroDone] = useState(false);
-  const [mode, setMode] = useState<GameMode>('menu');
   const [phase, setPhase] = useState<Phase>('start');
   const [budget, setBudget] = useState(10000);
   const [integrity, setIntegrity] = useState(100);
@@ -2587,7 +2837,7 @@ export default function App() {
 
   // Plot assignments — each index 0..4 holds a buildingId or null (empty plot)
   const [plotAssignments, setPlotAssignments] = useState<(BuildingId | null)[]>(
-    [null, null, null, null, null],
+    [null, null, null],
   );
   // Which plot the user clicked (for suggestions panel + active construction)
   const [selectedPlotIdx, setSelectedPlotIdx] = useState<number | null>(null);
@@ -2598,6 +2848,15 @@ export default function App() {
 
   const [chosenIdx, setChosenIdx] = useState<number | null>(null);
   const [coinTrigger, setCoinTrigger] = useState(0);
+  const [bonusTrigger, setBonusTrigger] = useState(0);
+
+  // ── Rival "Otabek" — silent rival making opposite choices ──
+  const [otabekBuildings, setOtabekBuildings] = useState<BuildingsMap>(FRESH_BUILDINGS);
+  const [otabekIntegrity, setOtabekIntegrity] = useState(100);
+  const [otabekBudget, setOtabekBudget] = useState(10000);
+  const [otabekEarnings, setOtabekEarnings] = useState(0);
+  const otabekBuildingsRef = useRef(otabekBuildings);
+  useEffect(() => { otabekBuildingsRef.current = otabekBuildings; }, [otabekBuildings]);
 
   const [constructionProgress, setConstructionProgress] = useState(0);
   const [buildStage, setBuildStage] = useState(0);
@@ -2650,31 +2909,25 @@ export default function App() {
 
   const constructingPlotIdx = phase === 'building' && selectedPlotIdx !== null ? selectedPlotIdx : null;
 
-  function startMayorMode() {
+  function startGame() {
     audio.unlock();
-    setMode('mayor');
     setBudget(10000); setIntegrity(100);
     setBuildings({ ...FRESH_BUILDINGS });
     setHistory([]); setPersonalEarnings(0);
     setChosenIdx(null); setDisaster(null);
     setVisitingFriend(null); setPendingScenarioForJudge(null);
     setConstructionProgress(0);
-    setPlotAssignments([null, null, null, null, null]);
+    setPlotAssignments([null, null, null]);
     setSelectedPlotIdx(null);
     setCurrentBuildingId(null);
     setSuggestionsOpen(false);
     setBuildStage(0);
+    // Reset rival
+    setOtabekBuildings({ ...FRESH_BUILDINGS });
+    setOtabekIntegrity(100);
+    setOtabekBudget(10000);
+    setOtabekEarnings(0);
     setPhase('idle');
-  }
-
-  function startLifeMode() {
-    audio.unlock();
-    setMode('life');
-  }
-
-  function exitToMenu() {
-    setMode('menu');
-    setPhase('start');
   }
 
   function handlePlotClick(plotIdx: number) {
@@ -2706,6 +2959,8 @@ export default function App() {
     if (!currentScenario) return;
     audio.unlock();
     const opt = currentScenario.options[idx];
+    const otabekIdx = idx === 0 ? 1 : 0;
+    const otabekOpt = currentScenario.options[otabekIdx];
 
     setBudget((b) => b - opt.cost);
     setIntegrity((v) => Math.max(0, Math.min(100, v + opt.integrityChange)));
@@ -2714,6 +2969,17 @@ export default function App() {
       setPersonalEarnings((v) => v + opt.personalBonus!);
       setCoinTrigger((c) => c + 1);
       audio.coin();
+    }
+
+    // Mirror to Otabek (opposite choice — same scenario, opposite path)
+    setOtabekBudget((b) => b - otabekOpt.cost);
+    setOtabekIntegrity((v) => Math.max(0, Math.min(100, v + otabekOpt.integrityChange)));
+    setOtabekBuildings((prev) => ({
+      ...prev,
+      [currentScenario.buildingId]: { status: 'alo', isFragile: otabekOpt.isCorrupt },
+    }));
+    if (otabekOpt.isCorrupt && otabekOpt.personalBonus) {
+      setOtabekEarnings((v) => v + otabekOpt.personalBonus!);
     }
 
     setHistory((h) => [
@@ -2769,10 +3035,27 @@ export default function App() {
     }
   }
 
-  // CELEBRATION → after 1.9s → next round (no per-round disasters!)
+  // CELEBRATION → if honest, go to blessing; else advance
   useEffect(() => {
     if (phase !== 'celebration') return;
-    const t = window.setTimeout(() => advanceRound(), CELEBRATION_MS);
+    const t = window.setTimeout(() => {
+      if (
+        currentScenario &&
+        chosenIdx !== null &&
+        !currentScenario.options[chosenIdx].isCorrupt
+      ) {
+        // Honest choice — citizens come bless + bonus money
+        const bid = currentScenario.buildingId;
+        const bonus = BLESSINGS[bid].bonus;
+        setBudget((b) => b + bonus);
+        setIntegrity((v) => Math.min(100, v + 3)); // small extra integrity boost
+        setBonusTrigger((t) => t + 1);
+        setPhase('blessing');
+      } else {
+        // Corrupt — straight to next round (no blessing)
+        advanceRound();
+      }
+    }, CELEBRATION_MS);
     return () => window.clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -2784,15 +3067,29 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [phase]);
 
-  // LIVING-CITY → check for corruption → start incident reports OR jump to game-over
+  // LIVING-CITY → also silently collapse Otabek's fragile, then route player
   useEffect(() => {
     if (phase !== 'living-city') return;
     const t = window.setTimeout(() => {
+      // Time has passed — Otabek's fragile buildings collapse silently in his city
+      const otabekFragile = (Object.entries(otabekBuildingsRef.current) as [BuildingId, BuildingState][])
+        .filter(([, b]) => b.isFragile && b.status !== 'vayrona')
+        .map(([id]) => id);
+      if (otabekFragile.length > 0) {
+        setOtabekBuildings((prev) => {
+          const next = { ...prev };
+          otabekFragile.forEach((id) => { next[id] = { status: 'vayrona', isFragile: false }; });
+          return next;
+        });
+        setOtabekBudget((b) => Math.max(0, b - otabekFragile.length * 1200 - 600));
+        setOtabekIntegrity((v) => Math.max(0, v - otabekFragile.length * 15));
+      }
+
       const corruptIds = (Object.entries(buildingsRef.current) as [BuildingId, BuildingState][])
         .filter(([, b]) => b.isFragile && b.status !== 'vayrona')
         .map(([id]) => id);
       if (corruptIds.length === 0) {
-        setPhase('game-over'); // happy path — no incidents
+        setPhase('game-over');
       } else {
         setReportQueue(corruptIds);
         setReportIndex(0);
@@ -2862,7 +3159,7 @@ export default function App() {
   function advanceRound() {
     // Count how many plots are now occupied AND built (status === 'alo' or other final)
     const occupied = plotAssignments.filter(Boolean).length;
-    if (occupied >= 5) {
+    if (occupied >= ALL_BUILDING_IDS.length) {
       // All 5 plots placed — let the city LIVE for a while, then check consequences
       setPhase('time-passes');
     } else {
@@ -2908,10 +3205,8 @@ export default function App() {
         <IntroCinematic onDone={() => setIntroDone(true)} />
       )}
 
-      {mode === 'life' ? (
-        <LifeMode onExit={exitToMenu} />
-      ) : phase === 'start' ? (
-        <StartScreen onStartMayor={startMayorMode} onStartLife={startLifeMode} />
+      {phase === 'start' ? (
+        <StartScreen onStart={startGame} />
       ) : phase === 'game-over' ? (
         <>
           <HUD
@@ -2935,14 +3230,18 @@ export default function App() {
             buildings={buildings} history={history}
             budget={budget} integrity={integrity}
             personalEarnings={personalEarnings}
-            onRestart={startMayorMode}
+            onRestart={startGame}
+            otabekBuildings={otabekBuildings}
+            otabekIntegrity={otabekIntegrity}
+            otabekBudget={otabekBudget}
+            otabekEarnings={otabekEarnings}
           />
         </>
       ) : (
         <>
           <HUD
             budget={displayBudget} integrity={displayIntegrity}
-            round={builtCount} totalRounds={5}
+            round={builtCount} totalRounds={3}
             onVisitFriend={() => setFriendPickerOpen(true)}
             visitingFriend={visitingFriend}
             onBackHome={() => setVisitingFriend(null)}
@@ -2971,7 +3270,7 @@ export default function App() {
             >
               <div className="rounded-2xl border-2 border-yellow-400/40 bg-slate-950/85 px-5 py-3 shadow-2xl backdrop-blur">
                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
-                  Sizning shahringiz · {builtCount}/5 qurildi
+                  Sizning shahringiz · {builtCount}/{ALL_BUILDING_IDS.length} qurildi
                 </div>
                 <div className="text-base font-extrabold text-white sm:text-lg">
                   📍 Bo'sh joyni tanlang — nima qurmoqchisiz?
@@ -3007,7 +3306,16 @@ export default function App() {
                 isCorrupt={currentScenario.options[chosenIdx].isCorrupt}
               />
             )}
+            {phase === 'blessing' && currentScenario && !visitingFriend && (
+              <CitizenBlessing
+                key={`bless-${currentScenario.buildingId}`}
+                buildingId={currentScenario.buildingId}
+                onComplete={advanceRound}
+              />
+            )}
           </AnimatePresence>
+
+          <BonusCoinBurst trigger={bonusTrigger} />
 
           <AnimatePresence mode="wait">
             {!visitingFriend && phase === 'chapter-intro' && currentScenario && (
