@@ -178,9 +178,12 @@ type Phase =
   | 'chapter-intro'
   | 'pitch'
   | 'reaction'
-  | 'building'           // 3.5s real construction sequence
-  | 'celebration'        // 1.8s post-build toast + voice
-  | 'disaster-cinematic'
+  | 'building'             // interactive QURISH minigame
+  | 'celebration'          // 1.8s after each build
+  | 'time-passes'          // "1 YIL O'TDI" cinematic (after all 5 done)
+  | 'living-city'          // citizens walk, no UI overlay
+  | 'incident-report'      // citizen brings report of victim
+  | 'disaster-cinematic'   // big quake/flood (only if any corrupt)
   | 'disaster-modal'
   | 'ai-judge'
   | 'game-over';
@@ -270,6 +273,83 @@ const BUILD_COMPLETE_VOICE: Record<BuildingId, string> = {
   yollar: "Yo'l ochildi!",
   chiroqlar: 'Ko‘cha chiroqlari yondi!',
   bogcha: "Bog'cha tayyor!",
+};
+
+// ── Citizen incident reports — one per corrupt building, shown after living-city ──
+interface IncidentReport {
+  buildingId: BuildingId;
+  citizen: { name: string; role: string; emoji: string; bg: string };
+  headline: string;       // big headline that appears
+  message: string;        // long detailed report
+  voiceLine: string;      // short phrase for speechSynthesis
+}
+
+const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
+  maktab: {
+    buildingId: 'maktab',
+    citizen: {
+      name: 'Oygul opa',
+      role: 'Maktab o\'quvchisining onasi',
+      emoji: '👩‍🦰',
+      bg: 'from-rose-700 via-rose-900 to-slate-950',
+    },
+    headline: 'Maktabda devor uvalanib tushdi',
+    message:
+      "Hokim, mening qizim Munisa — 6-sinfda. Bugun darsda maktabning yuqori qavat devoridan bezakli bloklar uvalanib, ikkita o'quvchining boshiga to'kildi. Munisa shifoxonada — yorug'lik o'tkazgan jarohat. Hokim, men sizdan bir narsani so'rayman: nega g'isht arzon edi? Kim aybdor bunda?",
+    voiceLine: "Mening qizim maktabda jarohatlandi.",
+  },
+  shifoxona: {
+    buildingId: 'shifoxona',
+    citizen: {
+      name: 'Hasan ota',
+      role: 'Bemor qarindoshi',
+      emoji: '👨‍🦳',
+      bg: 'from-sky-700 via-blue-900 to-slate-950',
+    },
+    headline: 'Shifoxona uskunasidan noto\'g\'ri tashxis',
+    message:
+      "Hokim, mening akam shifoxonada davolanardi. Yangi olingan rentgen apparati 3 marta xato natija ko'rsatdi. Akamga yurak xastaligi yo'q deyishdi, uyga qaytdi. Bir hafta keyin... uyda yiqilib tushdi. Hozir reanimatsiyada. Hokim, bu uskunalar haqiqatdan ham sertifikatlangan edimi?",
+    voiceLine: "Akam noto'g'ri tashxis oldi va ahvoli og'ir.",
+  },
+  yollar: {
+    buildingId: 'yollar',
+    citizen: {
+      name: 'Karim aka',
+      role: 'Taksi haydovchisi',
+      emoji: '🧔',
+      bg: 'from-stone-700 via-zinc-900 to-stone-950',
+    },
+    headline: 'Yangi yo\'lda mashinalar ag\'darilmoqda',
+    message:
+      "Hokim, men 20 yildan beri taksi haydayman. Yangi qurilgan yo'lda — bor-yo'g'i 4 oy bo'ldi-ku — chuqurlar paydo bo'ldi, ba'zi joylarda asfalt o'pirilib tushgan. Bugun ertalab yo'lovchimning oilasi mashinada... chuqurga tushdik, uloqib ketdik. Yo'lovchimning qo'li singan, ikki bola yig'lab turibdi. Hokim, bu qanday qurilgan yo'l?",
+    voiceLine: "Yo'lda chuqurlar paydo bo'ldi, mashina ag'darildi.",
+  },
+  chiroqlar: {
+    buildingId: 'chiroqlar',
+    citizen: {
+      name: 'Yusufbek',
+      role: '12 yashar o\'quvchi',
+      emoji: '🧒',
+      bg: 'from-indigo-800 via-violet-950 to-slate-950',
+    },
+    headline: 'Qorong\'i ko\'chada bola yo\'qoldi',
+    message:
+      "Hokim, men 6-sinfda o'qiyman. Kechqurun mashg'ulotlardan keyin maktabdan qaytaman. Yangi LED chiroqlar yondi 2 hafta — keyin so'ndi. Kecha onam meni topa olmadi: men ko'chada notanish odamlarning oldidan o'tib, qorong'ida yo'qotgan edim. Politsiya 3 soat qidirdi. Hokim, agar chiroqlar yongan bo'lsa, men topilgan bo'lardim...",
+    voiceLine: "Qorong'i ko'chada men yo'qoldim.",
+  },
+  bogcha: {
+    buildingId: 'bogcha',
+    citizen: {
+      name: 'Mohira opa',
+      role: 'Bog\'cha tarbiyachisi',
+      emoji: '👩‍🏫',
+      bg: 'from-fuchsia-700 via-purple-900 to-slate-950',
+    },
+    headline: 'Bog\'cha devori yorildi, bolalar evakuatsiya qilindi',
+    message:
+      "Hokim, men 25 yildan beri tarbiyachiman. Hech qachon bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar bilan o'ynayotgan edim — devor yorilib chiqdi. To'rt nafar 4-yashar bola devor yonida edi. Olloh saqladi — hech kim qattiq jarohatlanmadi, faqat qo'rqdik. Lekin bog'chani yopdik. Bolalar uyda. Onalar yig'layapti. Hokim, agar zilzila kelsa-chi?",
+    voiceLine: "Bog'cha devorlari yorildi, bolalar qo'rqdi.",
+  },
 };
 
 const FRESH_BUILDINGS: BuildingsMap = {
@@ -1565,6 +1645,220 @@ function DisasterModal({
 }
 
 // ============================================================================
+//  TIME-PASSES CINEMATIC
+// ============================================================================
+
+function TimePassesScene({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    audio.speak("Bir yil o'tdi. Shahar yashayapti...", { rate: 0.95 });
+    const t = setTimeout(onDone, 3200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    >
+      {/* Subtle clock background */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center text-[28rem] opacity-5"
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 12, ease: 'linear' }}
+      >
+        🕐
+      </motion.div>
+
+      <motion.div
+        initial={{ y: 30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -20, opacity: 0 }}
+        transition={{ duration: 0.7 }}
+        className="relative z-10 px-4 text-center"
+      >
+        <motion.div
+          className="text-yellow-300 text-xs sm:text-sm font-bold"
+          style={{ letterSpacing: '0.6em' }}
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+        >
+          VAQT O'TMOQDA
+        </motion.div>
+        <motion.div
+          initial={{ scale: 1.3 }} animate={{ scale: 1 }}
+          transition={{ duration: 1, delay: 0.3 }}
+          className="mt-3 text-6xl font-black text-white sm:text-8xl"
+        >
+          1 YIL O'TDI
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          className="mt-4 text-base text-white/70 sm:text-xl"
+        >
+          Shahar yashayapti. Odamlar ishga ketishadi, bolalar maktabga boradi...
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
+//  LIVING-CITY OVERLAY (very minimal — just shows the 3D scene with a tooltip)
+// ============================================================================
+
+function LivingCityOverlay({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 4000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-x-0 bottom-12 z-30 flex justify-center px-4"
+      initial={{ y: 30, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -10, opacity: 0 }}
+    >
+      <div className="rounded-2xl border-2 border-yellow-400/40 bg-slate-950/85 px-5 py-3 backdrop-blur shadow-2xl">
+        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+          Sizning shahringiz
+        </div>
+        <div className="text-base font-extrabold text-white sm:text-lg">
+          Odamlar yashayapti, ishga ketmoqda...
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
+//  INCIDENT REPORT — citizen brings urgent news
+// ============================================================================
+
+function IncidentReportScene({
+  report, current, total, onContinue,
+}: {
+  report: IncidentReport;
+  current: number;
+  total: number;
+  onContinue: () => void;
+}) {
+  const [textDone, setTextDone] = useState(false);
+  useEffect(() => {
+    setTextDone(false);
+    audio.speak(report.voiceLine, { rate: 1, pitch: 0.95 });
+  }, [report.voiceLine]);
+
+  return (
+    <motion.div
+      key={`incident-${report.buildingId}`}
+      className="fixed inset-0 z-40"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className={`absolute inset-0 bg-gradient-to-br ${report.citizen.bg}`} />
+      {/* Police-style flashing light at top */}
+      <motion.div
+        className="absolute inset-x-0 top-0 h-1.5"
+        animate={{ backgroundColor: ['#dc2626', '#1e3a8a', '#dc2626'] }}
+        transition={{ repeat: Infinity, duration: 0.8 }}
+      />
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          background:
+            'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15), transparent 50%), radial-gradient(circle at 70% 80%, rgba(0,0,0,0.5), transparent 60%)',
+        }}
+      />
+
+      <div className="relative flex min-h-full items-end px-3 pb-4 pt-24 sm:items-center sm:px-8 sm:pb-8">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-8 sm:grid-cols-[auto_1fr] sm:gap-12">
+          <motion.div
+            initial={{ x: -50, scale: 0.8, opacity: 0 }}
+            animate={{ x: 0, scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 180 }}
+            className="flex justify-center sm:justify-start"
+          >
+            <div className="relative h-52 w-52 overflow-hidden rounded-full border-[6px] border-rose-400/70 shadow-2xl sm:h-72 sm:w-72">
+              <div className={`absolute inset-0 bg-gradient-to-br ${report.citizen.bg}`} />
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center"
+                animate={!textDone ? { y: [0, -3, 0], rotate: [-2, 2, -2] } : {}}
+                transition={{ repeat: !textDone ? Infinity : 0, duration: 0.6 }}
+              >
+                <span className="text-[7rem] leading-none drop-shadow-2xl sm:text-[9rem]">
+                  {report.citizen.emoji}
+                </span>
+              </motion.div>
+              <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
+            </div>
+          </motion.div>
+
+          <div className="min-w-0">
+            {/* Breaking news bar */}
+            <motion.div
+              initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+              className="mb-3 inline-flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white"
+            >
+              <Newspaper className="h-3 w-3" />
+              Hodisa #{current + 1}/{total}
+            </motion.div>
+
+            <motion.div
+              initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="mb-3 text-2xl font-black leading-tight text-rose-200 sm:text-3xl"
+            >
+              {report.headline}
+            </motion.div>
+
+            {/* Citizen name plate */}
+            <motion.div
+              initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mb-3 inline-flex items-center gap-2 rounded-xl border border-yellow-400/40 bg-black/40 px-3 py-1.5 backdrop-blur"
+            >
+              <span className="text-xl">{report.citizen.emoji}</span>
+              <div>
+                <div className="text-sm font-extrabold text-white">{report.citizen.name}</div>
+                <div className="text-[10px] uppercase tracking-wider text-yellow-300/80">
+                  {report.citizen.role}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Speech bubble */}
+            <div className="relative mb-5">
+              <div className="rounded-3xl bg-white px-5 py-4 text-[15px] leading-relaxed text-slate-900 shadow-2xl sm:px-6 sm:py-5 sm:text-base">
+                <TypewriterLine
+                  text={report.message}
+                  speed={18}
+                  onDone={() => setTextDone(true)}
+                  dark
+                />
+              </div>
+              <div className="absolute -left-3 top-12 hidden h-0 w-0 border-y-[14px] border-r-[18px] border-y-transparent border-r-white sm:block" />
+            </div>
+
+            <motion.button
+              initial={{ opacity: 0 }} animate={{ opacity: textDone ? 1 : 0.4 }}
+              whileHover={textDone ? { scale: 1.04, y: -2 } : undefined}
+              whileTap={textDone ? { scale: 0.97 } : undefined}
+              disabled={!textDone}
+              onClick={() => { audio.click(); onContinue(); }}
+              className="rounded-2xl bg-rose-500 px-6 py-3 text-base font-extrabold text-white shadow-2xl transition hover:bg-rose-400 disabled:opacity-40"
+            >
+              {current + 1 >= total ? "Yakuniy oqibatlar" : "Keyingi xabar"} <ChevronRight className="ml-0.5 inline h-5 w-5" />
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
 //  AI JUDGE
 // ============================================================================
 
@@ -1927,6 +2221,10 @@ export default function App() {
   const [friendPickerOpen, setFriendPickerOpen] = useState(false);
   const [visitingFriend, setVisitingFriend] = useState<Friend | null>(null);
 
+  // Post-build incident report queue
+  const [reportQueue, setReportQueue] = useState<BuildingId[]>([]);
+  const [reportIndex, setReportIndex] = useState(0);
+
   const currentScenario = SCENARIOS[round];
   const displayBuildings = visitingFriend ? visitingFriend.buildings : buildings;
   const displayIntegrity = visitingFriend ? visitingFriend.integrity : integrity;
@@ -2016,39 +2314,57 @@ export default function App() {
     }
   }
 
-  // CELEBRATION → after 1.9s → disaster check
+  // CELEBRATION → after 1.9s → next round (no per-round disasters!)
   useEffect(() => {
     if (phase !== 'celebration') return;
-    const t = window.setTimeout(() => {
-      const justAddedFragile =
-        currentScenario && chosenIdx !== null && currentScenario.options[chosenIdx].isCorrupt;
-      const fragileExists = Object.values(buildingsRef.current).some(
-        (b) => b.isFragile && b.status !== 'vayrona',
-      );
-      const willHaveFragile = fragileExists || justAddedFragile;
-      const chance = willHaveFragile ? 0.65 : 0.2;
-      if (Math.random() < chance) triggerDisaster(!!justAddedFragile);
-      else advanceRound();
-    }, CELEBRATION_MS);
+    const t = window.setTimeout(() => advanceRound(), CELEBRATION_MS);
     return () => window.clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  function triggerDisaster(triggeredByCurrentCorrupt: boolean) {
-    const type: DisasterType = Math.random() < 0.5 ? 'zilzila' : 'suv-toshqini';
-    const affectedIds: BuildingId[] = [];
-    (Object.entries(buildingsRef.current) as [BuildingId, BuildingState][]).forEach(([id, b]) => {
-      if (b.isFragile && b.status !== 'vayrona' && Math.random() < 0.85) affectedIds.push(id);
-    });
-    if (
-      triggeredByCurrentCorrupt && currentScenario && chosenIdx !== null &&
-      currentScenario.options[chosenIdx].isCorrupt &&
-      !affectedIds.includes(currentScenario.buildingId)
-    ) {
-      if (Math.random() < 0.85) affectedIds.push(currentScenario.buildingId);
+  // TIME-PASSES → LIVING-CITY (auto)
+  useEffect(() => {
+    if (phase !== 'time-passes') return;
+    const t = window.setTimeout(() => setPhase('living-city'), 3200);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  // LIVING-CITY → check for corruption → start incident reports OR jump to game-over
+  useEffect(() => {
+    if (phase !== 'living-city') return;
+    const t = window.setTimeout(() => {
+      const corruptIds = (Object.entries(buildingsRef.current) as [BuildingId, BuildingState][])
+        .filter(([, b]) => b.isFragile && b.status !== 'vayrona')
+        .map(([id]) => id);
+      if (corruptIds.length === 0) {
+        setPhase('game-over'); // happy path — no incidents
+      } else {
+        setReportQueue(corruptIds);
+        setReportIndex(0);
+        setPhase('incident-report');
+      }
+    }, 4000);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  function continueAfterIncidentReport() {
+    if (reportIndex + 1 >= reportQueue.length) {
+      // All reports shown — trigger the big disaster
+      triggerFinalDisaster();
+    } else {
+      setReportIndex((i) => i + 1);
     }
-    const cost = affectedIds.length * 800 + 400;
-    const integrityHit = affectedIds.length * 12;
+  }
+
+  function triggerFinalDisaster() {
+    const type: DisasterType = Math.random() < 0.5 ? 'zilzila' : 'suv-toshqini';
+    // ALL fragile buildings collapse in the big event
+    const affectedIds = (Object.entries(buildingsRef.current) as [BuildingId, BuildingState][])
+      .filter(([, b]) => b.isFragile && b.status !== 'vayrona')
+      .map(([id]) => id);
+
+    const cost = affectedIds.length * 1200 + 600;
+    const integrityHit = affectedIds.length * 15;
 
     setBuildings((prev) => {
       const next = { ...prev };
@@ -2058,11 +2374,14 @@ export default function App() {
     setBudget((b) => Math.max(0, b - cost));
     setIntegrity((v) => Math.max(0, v - integrityHit));
     setDisaster({
-      type, affectedNames: affectedIds.map((id) => BUILDING_NAME[id]), cost,
+      type,
+      affectedNames: affectedIds.map((id) => BUILDING_NAME[id]),
+      cost,
     });
     setShakeKey((k) => k + 1);
-    if (affectedIds.length > 0 && currentScenario) setPendingScenarioForJudge(currentScenario);
-    else setPendingScenarioForJudge(null);
+    // Use the LAST corrupt scenario for AI Judge context
+    const lastCorruptScenario = SCENARIOS.find((s) => affectedIds.includes(s.buildingId));
+    setPendingScenarioForJudge(lastCorruptScenario ?? null);
     setPhase('disaster-cinematic');
   }
 
@@ -2082,16 +2401,18 @@ export default function App() {
 
   function continueAfterJudge() {
     setPendingScenarioForJudge(null);
-    advanceRound();
+    setPhase('game-over');
   }
 
   function advanceRound() {
     if (round + 1 >= SCENARIOS.length) {
-      setPhase('game-over');
+      // All 5 buildings done — let the city LIVE for a while, then check consequences
+      setPhase('time-passes');
     } else {
       setRound((r) => r + 1);
       setChosenIdx(null);
       setConstructionProgress(0);
+      setBuildStage(0);
       setPhase('chapter-intro');
     }
   }
@@ -2217,6 +2538,21 @@ export default function App() {
                 chosenIdx={chosenIdx}
                 onChoose={handleChoose}
                 onContinue={continueAfterReaction}
+              />
+            )}
+            {phase === 'time-passes' && (
+              <TimePassesScene key="tp" onDone={() => setPhase('living-city')} />
+            )}
+            {phase === 'living-city' && (
+              <LivingCityOverlay key="lc" onDone={() => { /* handled by effect */ }} />
+            )}
+            {phase === 'incident-report' && reportQueue[reportIndex] && (
+              <IncidentReportScene
+                key={`report-${reportIndex}`}
+                report={INCIDENT_REPORTS[reportQueue[reportIndex]]}
+                current={reportIndex}
+                total={reportQueue.length}
+                onContinue={continueAfterIncidentReport}
               />
             )}
             {phase === 'disaster-cinematic' && disaster && (

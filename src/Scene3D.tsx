@@ -30,34 +30,48 @@ const PLOT_POSITIONS: Record<BuildingId, [number, number, number]> = {
   bogcha: [0, 0, 3.5],
 };
 
+// Muted, realistic palette — less "lego" toy colors, more like real buildings
 const BUILDING_PALETTE: Record<BuildingId, { body: string; roof: string; window: string }> = {
-  maktab: { body: '#fbbf24', roof: '#b45309', window: '#1e3a8a' },
-  shifoxona: { body: '#f1f5f9', roof: '#dc2626', window: '#0ea5e9' },
-  yollar: { body: '#3f3f46', roof: '#52525b', window: '#facc15' },
-  chiroqlar: { body: '#475569', roof: '#fde047', window: '#fef9c3' },
-  bogcha: { body: '#f472b6', roof: '#9d174d', window: '#fef9c3' },
+  maktab: { body: '#d4a574', roof: '#7c4419', window: '#1e3a5f' },     // school: warm beige + brown roof
+  shifoxona: { body: '#e8e4dc', roof: '#9b2c2c', window: '#3b6e8f' },  // hospital: off-white + dark red
+  yollar: { body: '#2d2d33', roof: '#3d3d44', window: '#c9a849' },     // road: asphalt
+  chiroqlar: { body: '#52525b', roof: '#a8a29e', window: '#fde68a' },  // lights: gray pole
+  bogcha: { body: '#c2839a', roof: '#7a3650', window: '#fef3c7' },     // kindergarten: muted pink
 };
 
+// Muted house palette — real-world building colors (terracotta, ochre, sage, taupe)
 const HOUSE_POSITIONS: { pos: [number, number, number]; color: string; roof: string }[] = [
-  { pos: [-6, 0, -6], color: '#fde68a', roof: '#9a3412' },
-  { pos: [-3, 0, -6], color: '#a7f3d0', roof: '#7c2d12' },
-  { pos: [0, 0, -6], color: '#fca5a5', roof: '#991b1b' },
-  { pos: [3, 0, -6], color: '#bfdbfe', roof: '#1e40af' },
-  { pos: [6, 0, -6], color: '#fde68a', roof: '#9a3412' },
+  { pos: [-6, 0, -6], color: '#d4b896', roof: '#6b3818' },   // beige + brown
+  { pos: [-3, 0, -6], color: '#a8b89c', roof: '#4a3320' },   // sage + brown
+  { pos: [0, 0, -6], color: '#c89878', roof: '#7a2820' },    // terracotta + dark red
+  { pos: [3, 0, -6], color: '#9bb4c4', roof: '#2a3548' },    // dusty blue
+  { pos: [6, 0, -6], color: '#d4a574', roof: '#5d2a18' },    // ochre
 
-  { pos: [-6, 0, -3], color: '#c7d2fe', roof: '#3730a3' },
-  { pos: [6, 0, -3], color: '#fda4af', roof: '#9d174d' },
+  { pos: [-6, 0, -3], color: '#a09cb8', roof: '#3a2f5a' },   // muted lavender
+  { pos: [6, 0, -3], color: '#b89695', roof: '#5a2030' },    // dusty rose
 
-  { pos: [-6, 0, 0], color: '#fde68a', roof: '#7c2d12' },
-  { pos: [6, 0, 0], color: '#a7f3d0', roof: '#14532d' },
+  { pos: [-6, 0, 0], color: '#c4ad7d', roof: '#5d3a1a' },
+  { pos: [6, 0, 0], color: '#92a585', roof: '#3a4520' },     // olive
 
-  { pos: [-6, 0, 3], color: '#fbcfe8', roof: '#831843' },
-  { pos: [6, 0, 3], color: '#fde68a', roof: '#92400e' },
+  { pos: [-6, 0, 3], color: '#b8a098', roof: '#5a3030' },
+  { pos: [6, 0, 3], color: '#d6b48a', roof: '#6a3a18' },
 
-  { pos: [-6, 0, 6], color: '#bfdbfe', roof: '#1e3a8a' },
-  { pos: [-3, 0, 6], color: '#fca5a5', roof: '#991b1b' },
-  { pos: [3, 0, 6], color: '#a7f3d0', roof: '#166534' },
-  { pos: [6, 0, 6], color: '#fde68a', roof: '#92400e' },
+  { pos: [-6, 0, 6], color: '#9bb0c4', roof: '#2a3850' },
+  { pos: [-3, 0, 6], color: '#bb9c8a', roof: '#5a2820' },
+  { pos: [3, 0, 6], color: '#a4b89c', roof: '#3a4528' },
+  { pos: [6, 0, 6], color: '#cfb284', roof: '#5d3a1a' },
+];
+
+// Citizen walking paths — sidewalks on either side of horizontal/vertical roads
+const CITIZEN_PATHS: { axis: 'x' | 'z'; lane: number; speed: number; color: string; size: number }[] = [
+  { axis: 'x', lane: -2.7, speed: 0.45, color: '#1e40af', size: 1 },     // young man, north sidewalk
+  { axis: 'x', lane: -2.5, speed: 0.6, color: '#9d174d', size: 0.85 },   // woman in red
+  { axis: 'x', lane: 2.7, speed: 0.35, color: '#3730a3', size: 1 },      // student, south sidewalk
+  { axis: 'x', lane: 2.5, speed: 0.5, color: '#065f46', size: 0.78 },    // child
+  { axis: 'z', lane: -2.7, speed: 0.4, color: '#7c2d12', size: 1 },      // elder, west sidewalk
+  { axis: 'z', lane: 2.7, speed: 0.55, color: '#0c4a6e', size: 1 },      // worker, east sidewalk
+  { axis: 'x', lane: -2.5, speed: 0.3, color: '#581c87', size: 0.95 },   // grandmother
+  { axis: 'z', lane: 2.5, speed: 0.65, color: '#92400e', size: 0.82 },   // child running
 ];
 
 const TREE_POSITIONS: [number, number, number][] = [
@@ -82,17 +96,103 @@ const TREE_POSITIONS: [number, number, number][] = [
 function Ground() {
   return (
     <>
-      {/* Grass base */}
+      {/* Grass base — muted, more realistic green */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color="#86efac" />
+        <meshStandardMaterial color="#7a9266" roughness={1} />
       </mesh>
-      {/* Sidewalks (slightly raised) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[1.7, 9, 64]} />
-        <meshStandardMaterial color="#a8a29e" transparent opacity={0.0} />
+      {/* Sidewalks — visible concrete bands flanking each road */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, -2.65]}>
+        <planeGeometry args={[16, 0.5]} />
+        <meshStandardMaterial color="#9c9a92" roughness={0.95} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 2.65]}>
+        <planeGeometry args={[16, 0.5]} />
+        <meshStandardMaterial color="#9c9a92" roughness={0.95} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.65, 0.018, 0]}>
+        <planeGeometry args={[0.5, 16]} />
+        <meshStandardMaterial color="#9c9a92" roughness={0.95} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.65, 0.018, 0]}>
+        <planeGeometry args={[0.5, 16]} />
+        <meshStandardMaterial color="#9c9a92" roughness={0.95} />
       </mesh>
     </>
+  );
+}
+
+function Citizen({
+  axis, lane, speed, color, size,
+}: {
+  axis: 'x' | 'z'; lane: number; speed: number; color: string; size: number;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const offset = useRef(Math.random() * 1000);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    const period = 16000 / speed;
+    const t = (((Date.now() + offset.current) % period) / period) * 18 - 9;
+    if (axis === 'x') {
+      ref.current.position.set(t, 0, lane);
+      ref.current.rotation.y = t > 0 ? 0 : Math.PI;
+    } else {
+      ref.current.position.set(lane, 0, t);
+      ref.current.rotation.y = t > 0 ? -Math.PI / 2 : Math.PI / 2;
+    }
+    // Gentle bobbing while walking
+    const phase = (Date.now() + offset.current) * 0.008;
+    ref.current.position.y = 0.02 + Math.abs(Math.sin(phase)) * 0.04;
+  });
+
+  const skin = '#e8c39e';
+  return (
+    <group ref={ref} scale={size}>
+      {/* Legs (animated arms via swing) */}
+      <mesh position={[0.05, 0.15, 0]} castShadow>
+        <boxGeometry args={[0.06, 0.3, 0.08]} />
+        <meshStandardMaterial color="#1c1917" roughness={0.85} />
+      </mesh>
+      <mesh position={[-0.05, 0.15, 0]} castShadow>
+        <boxGeometry args={[0.06, 0.3, 0.08]} />
+        <meshStandardMaterial color="#1c1917" roughness={0.85} />
+      </mesh>
+      {/* Torso (jacket) */}
+      <mesh position={[0, 0.45, 0]} castShadow>
+        <boxGeometry args={[0.18, 0.32, 0.12]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+      {/* Arms */}
+      <SwingingArm side={1} color={color} />
+      <SwingingArm side={-1} color={color} />
+      {/* Head */}
+      <mesh position={[0, 0.72, 0]} castShadow>
+        <sphereGeometry args={[0.085, 14, 14]} />
+        <meshStandardMaterial color={skin} roughness={0.7} />
+      </mesh>
+      {/* Hair cap */}
+      <mesh position={[0, 0.78, 0]} castShadow>
+        <sphereGeometry args={[0.09, 14, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#3a2415" roughness={0.85} />
+      </mesh>
+    </group>
+  );
+}
+
+function SwingingArm({ side, color }: { side: 1 | -1; color: string }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.rotation.x = Math.sin(Date.now() * 0.008 + (side === 1 ? 0 : Math.PI)) * 0.5;
+  });
+  return (
+    <group ref={ref} position={[side * 0.11, 0.55, 0]}>
+      <mesh position={[0, -0.12, 0]} castShadow>
+        <boxGeometry args={[0.05, 0.26, 0.07]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+    </group>
   );
 }
 
@@ -168,9 +268,7 @@ function Tree({ position }: { position: [number, number, number] }) {
 }
 
 function House({
-  position,
-  color,
-  roof,
+  position, color, roof,
 }: {
   position: [number, number, number];
   color: string;
@@ -178,28 +276,50 @@ function House({
 }) {
   return (
     <group position={position}>
-      <RoundedBox args={[1.4, 1.0, 1.4]} radius={0.05} position={[0, 0.5, 0]} castShadow>
-        <meshStandardMaterial color={color} />
+      {/* Foundation strip */}
+      <RoundedBox args={[1.45, 0.1, 1.45]} radius={0.01} position={[0, 0.05, 0]} castShadow>
+        <meshStandardMaterial color="#5e564a" roughness={0.95} />
       </RoundedBox>
-      {/* Roof — pyramidal */}
-      <mesh position={[0, 1.3, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <coneGeometry args={[1.05, 0.7, 4]} />
-        <meshStandardMaterial color={roof} />
+      {/* Body */}
+      <RoundedBox args={[1.4, 0.9, 1.4]} radius={0.04} position={[0, 0.55, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={color} roughness={0.85} metalness={0.02} />
+      </RoundedBox>
+      {/* Pyramidal roof — tile-textured */}
+      <mesh position={[0, 1.25, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[1.08, 0.7, 4]} />
+        <meshStandardMaterial color={roof} roughness={0.95} />
+      </mesh>
+      {/* Chimney */}
+      <mesh position={[0.45, 1.3, 0.3]} castShadow>
+        <boxGeometry args={[0.15, 0.35, 0.15]} />
+        <meshStandardMaterial color="#5a3025" roughness={0.95} />
       </mesh>
       {/* Door */}
       <mesh position={[0, 0.3, 0.71]}>
         <planeGeometry args={[0.3, 0.5]} />
-        <meshStandardMaterial color="#451a03" />
+        <meshStandardMaterial color="#3a2010" roughness={0.95} />
       </mesh>
-      {/* Windows */}
-      <mesh position={[0.4, 0.65, 0.71]}>
-        <planeGeometry args={[0.22, 0.22]} />
-        <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.2} />
+      <mesh position={[0.08, 0.3, 0.715]}>
+        <sphereGeometry args={[0.018, 6, 6]} />
+        <meshStandardMaterial color="#a8a8a8" metalness={0.7} roughness={0.4} />
       </mesh>
-      <mesh position={[-0.4, 0.65, 0.71]}>
-        <planeGeometry args={[0.22, 0.22]} />
-        <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.2} />
-      </mesh>
+      {/* Windows with frames */}
+      {[-0.4, 0.4].map((x, i) => (
+        <group key={i} position={[x, 0.7, 0.71]}>
+          <mesh>
+            <planeGeometry args={[0.26, 0.26]} />
+            <meshStandardMaterial color="#3a2818" />
+          </mesh>
+          <mesh position={[0, 0, 0.005]}>
+            <planeGeometry args={[0.2, 0.2]} />
+            <meshStandardMaterial color="#5fa3c4" emissive="#3b6e8f" emissiveIntensity={0.2} roughness={0.25} />
+          </mesh>
+          <mesh position={[0, 0, 0.01]}>
+            <planeGeometry args={[0.03, 0.2]} />
+            <meshStandardMaterial color="#3a2818" />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -210,38 +330,75 @@ function FinishedSchool({ fragile }: { fragile: boolean }) {
   const palette = BUILDING_PALETTE.maktab;
   return (
     <group>
-      <RoundedBox args={[2.2, 1.8, 1.6]} radius={0.05} position={[0, 0.9, 0]} castShadow>
-        <meshStandardMaterial color={palette.body} />
+      {/* Stone foundation */}
+      <RoundedBox args={[2.4, 0.2, 1.8]} radius={0.02} position={[0, 0.1, 0]} castShadow>
+        <meshStandardMaterial color="#6e655a" roughness={0.95} />
       </RoundedBox>
-      {/* Windows row */}
-      {[-0.7, 0, 0.7].map((x, i) => (
-        <mesh key={`w1-${i}`} position={[x, 0.9, 0.81]}>
-          <planeGeometry args={[0.35, 0.4]} />
-          <meshStandardMaterial color={palette.window} emissive={palette.window} emissiveIntensity={0.3} />
-        </mesh>
-      ))}
-      {[-0.7, 0, 0.7].map((x, i) => (
-        <mesh key={`w2-${i}`} position={[x, 1.4, 0.81]}>
-          <planeGeometry args={[0.35, 0.3]} />
-          <meshStandardMaterial color={palette.window} emissive={palette.window} emissiveIntensity={0.3} />
-        </mesh>
-      ))}
-      {/* Roof slab */}
-      <RoundedBox args={[2.4, 0.15, 1.8]} radius={0.02} position={[0, 1.85, 0]} castShadow>
-        <meshStandardMaterial color={palette.roof} />
+      {/* Main body — 2 floors */}
+      <RoundedBox args={[2.2, 1.7, 1.6]} radius={0.04} position={[0, 1.05, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={palette.body} roughness={0.85} metalness={0.05} />
       </RoundedBox>
-      {/* Flag */}
-      <mesh position={[0, 2.3, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.8]} />
-        <meshStandardMaterial color="#94a3b8" />
+      {/* Floor divider line */}
+      <mesh position={[0, 1.4, 0.81]}>
+        <planeGeometry args={[2.2, 0.04]} />
+        <meshStandardMaterial color="#5a4030" roughness={0.9} />
       </mesh>
-      <mesh position={[0.2, 2.5, 0]}>
-        <planeGeometry args={[0.4, 0.25]} />
-        <meshStandardMaterial color="#22c55e" side={THREE.DoubleSide} />
+      {/* Window grid — 2 rows × 4 windows */}
+      {[-0.78, -0.26, 0.26, 0.78].flatMap((x) =>
+        [0.85, 1.6].map((y, i) => (
+          <group key={`w-${x}-${i}`} position={[x, y, 0.81]}>
+            {/* Window frame */}
+            <mesh>
+              <planeGeometry args={[0.32, 0.42]} />
+              <meshStandardMaterial color="#3a2818" roughness={0.9} />
+            </mesh>
+            {/* Glass */}
+            <mesh position={[0, 0, 0.005]}>
+              <planeGeometry args={[0.26, 0.36]} />
+              <meshStandardMaterial color={palette.window} emissive={palette.window} emissiveIntensity={0.18} roughness={0.2} />
+            </mesh>
+            {/* Cross mullion */}
+            <mesh position={[0, 0, 0.01]}>
+              <planeGeometry args={[0.04, 0.36]} />
+              <meshStandardMaterial color="#3a2818" />
+            </mesh>
+            <mesh position={[0, 0, 0.01]}>
+              <planeGeometry args={[0.26, 0.04]} />
+              <meshStandardMaterial color="#3a2818" />
+            </mesh>
+          </group>
+        )),
+      )}
+      {/* Door */}
+      <mesh position={[0, 0.55, 0.81]}>
+        <planeGeometry args={[0.42, 0.7]} />
+        <meshStandardMaterial color="#4a2818" roughness={0.95} />
       </mesh>
-      {/* Effects */}
-      {!fragile && <Sparkles count={20} scale={[3, 2, 3]} size={3} speed={0.4} color="#facc15" position={[0, 1, 0]} />}
-      {fragile && <Cloud opacity={0.5} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.5, 0]} />}
+      <mesh position={[0.13, 0.55, 0.815]}>
+        <sphereGeometry args={[0.025, 8, 8]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.4} />
+      </mesh>
+      {/* School sign over door */}
+      <mesh position={[0, 0.95, 0.81]}>
+        <planeGeometry args={[0.6, 0.12]} />
+        <meshStandardMaterial color="#1c1917" />
+      </mesh>
+      {/* Roof — sloped tile */}
+      <mesh position={[0, 2.0, 0]} rotation={[0, 0, 0]} castShadow>
+        <boxGeometry args={[2.4, 0.22, 1.8]} />
+        <meshStandardMaterial color={palette.roof} roughness={0.95} />
+      </mesh>
+      {/* Flag pole */}
+      <mesh position={[0, 2.55, 0]} castShadow>
+        <cylinderGeometry args={[0.025, 0.025, 0.9, 8]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.6} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.22, 2.78, 0]}>
+        <planeGeometry args={[0.42, 0.26]} />
+        <meshStandardMaterial color="#1e6b3a" side={THREE.DoubleSide} roughness={0.85} />
+      </mesh>
+      {!fragile && <Sparkles count={18} scale={[3, 2, 3]} size={2.5} speed={0.4} color="#fde68a" position={[0, 1.3, 0]} />}
+      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.6, 0]} />}
     </group>
   );
 }
@@ -250,36 +407,62 @@ function FinishedHospital({ fragile }: { fragile: boolean }) {
   const p = BUILDING_PALETTE.shifoxona;
   return (
     <group>
-      <RoundedBox args={[2.0, 2.4, 1.6]} radius={0.05} position={[0, 1.2, 0]} castShadow>
-        <meshStandardMaterial color={p.body} />
+      {/* Stone base */}
+      <RoundedBox args={[2.2, 0.18, 1.8]} radius={0.02} position={[0, 0.09, 0]} castShadow>
+        <meshStandardMaterial color="#6e655a" roughness={0.95} />
       </RoundedBox>
-      {/* Red cross */}
-      <mesh position={[0, 1.4, 0.81]}>
-        <planeGeometry args={[0.7, 0.18]} />
-        <meshStandardMaterial color="#dc2626" />
-      </mesh>
-      <mesh position={[0, 1.4, 0.81]}>
-        <planeGeometry args={[0.18, 0.7]} />
-        <meshStandardMaterial color="#dc2626" />
-      </mesh>
-      {/* Windows */}
-      {[0.3, 0.9, 1.5].map((y, i) => (
-        <group key={i}>
-          <mesh position={[0.6, y, 0.81]}>
-            <planeGeometry args={[0.25, 0.25]} />
-            <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.3} />
-          </mesh>
-          <mesh position={[-0.6, y, 0.81]}>
-            <planeGeometry args={[0.25, 0.25]} />
-            <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.3} />
-          </mesh>
-        </group>
+      {/* Main 3-floor body */}
+      <RoundedBox args={[2.0, 2.3, 1.6]} radius={0.04} position={[0, 1.35, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={p.body} roughness={0.7} metalness={0.05} />
+      </RoundedBox>
+      {/* Floor dividers */}
+      {[0.95, 1.7].map((y, i) => (
+        <mesh key={`fd-${i}`} position={[0, y, 0.81]}>
+          <planeGeometry args={[2.0, 0.03]} />
+          <meshStandardMaterial color="#a09c92" />
+        </mesh>
       ))}
-      <RoundedBox args={[2.2, 0.15, 1.8]} radius={0.02} position={[0, 2.45, 0]} castShadow>
-        <meshStandardMaterial color={p.roof} />
-      </RoundedBox>
-      {!fragile && <Sparkles count={20} scale={[3, 2.5, 3]} size={3} speed={0.4} color="#fef3c7" position={[0, 1.2, 0]} />}
-      {fragile && <Cloud opacity={0.5} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3, 0]} />}
+      {/* Red cross sign at top center */}
+      <mesh position={[0, 2.0, 0.81]}>
+        <planeGeometry args={[0.55, 0.14]} />
+        <meshStandardMaterial color="#9b2c2c" emissive="#9b2c2c" emissiveIntensity={0.3} />
+      </mesh>
+      <mesh position={[0, 2.0, 0.81]}>
+        <planeGeometry args={[0.14, 0.55]} />
+        <meshStandardMaterial color="#9b2c2c" emissive="#9b2c2c" emissiveIntensity={0.3} />
+      </mesh>
+      {/* Window grid 3 floors × 4 cols */}
+      {[-0.7, -0.23, 0.23, 0.7].flatMap((x) =>
+        [0.55, 1.3, 2.0].map((y, i) => (
+          <group key={`hw-${x}-${i}`} position={[x, y, 0.81]}>
+            <mesh>
+              <planeGeometry args={[0.26, 0.32]} />
+              <meshStandardMaterial color="#5a4030" />
+            </mesh>
+            <mesh position={[0, 0, 0.005]}>
+              <planeGeometry args={[0.22, 0.28]} />
+              <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.2} roughness={0.25} />
+            </mesh>
+          </group>
+        )),
+      )}
+      {/* Door */}
+      <mesh position={[0, 0.4, 0.81]}>
+        <planeGeometry args={[0.5, 0.6]} />
+        <meshStandardMaterial color="#3a2818" roughness={0.95} />
+      </mesh>
+      {/* Roof slab */}
+      <mesh position={[0, 2.6, 0]} castShadow>
+        <boxGeometry args={[2.2, 0.18, 1.8]} />
+        <meshStandardMaterial color={p.roof} roughness={0.85} />
+      </mesh>
+      {/* HVAC unit */}
+      <mesh position={[0.7, 2.78, -0.3]} castShadow>
+        <boxGeometry args={[0.3, 0.18, 0.3]} />
+        <meshStandardMaterial color="#5a5a5e" metalness={0.5} roughness={0.5} />
+      </mesh>
+      {!fragile && <Sparkles count={18} scale={[3, 2.5, 3]} size={2.5} speed={0.35} color="#dcd6c8" position={[0, 1.5, 0]} />}
+      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3, 0]} />}
     </group>
   );
 }
@@ -860,10 +1043,16 @@ export function Scene3D({
           <Tree key={`t-${i}`} position={p} />
         ))}
 
-        <Car axis="x" z={-1.7} speed={0.7} color="#ef4444" />
-        <Car axis="x" z={1.7} speed={1.0} color="#3b82f6" />
-        <Car axis="z" z={-1.7} speed={0.5} color="#facc15" />
-        <Car axis="z" z={1.7} speed={0.8} color="#22c55e" />
+        <Car axis="x" z={-1.85} speed={0.7} color="#a82828" />
+        <Car axis="x" z={1.85} speed={1.0} color="#2c4a8a" />
+        <Car axis="z" z={-1.85} speed={0.5} color="#a89028" />
+        <Car axis="z" z={1.85} speed={0.8} color="#3a6a3a" />
+        <Car axis="x" z={-1.85} speed={0.4} color="#5a5a60" />
+        <Car axis="z" z={1.85} speed={1.1} color="#6e3a18" />
+
+        {CITIZEN_PATHS.map((p, i) => (
+          <Citizen key={`cit-${i}`} {...p} />
+        ))}
       </ShakingGroup>
 
       <CameraController target={cameraTarget} zoom={cameraZoom} />
