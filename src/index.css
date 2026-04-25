@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Animated CSS color custom properties for smooth sky transitions */
+@property --sky-top {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #38bdf8;
+}
+@property --sky-mid {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #2563eb;
+}
+@property --sky-bot {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #1e1b4b;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #0f1b2d;
+  color: #e6eefb;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.sky-bg {
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bot) 100%);
+  transition:
+    --sky-top 1.6s ease,
+    --sky-mid 1.6s ease,
+    --sky-bot 1.6s ease;
+}
+
+/* —— Tile decorations —— */
+.grass-base {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.06), transparent 50%),
+    linear-gradient(135deg, #15803d 0%, #166534 100%);
+}
+.dirt-base {
+  background:
+    radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.05), transparent 50%),
+    linear-gradient(135deg, #92400e 0%, #78350f 100%);
+}
+.road-base {
+  background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+}
+.water-base {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);
+}
+.house-base {
+  background: linear-gradient(135deg, #fde68a 0%, #f59e0b 100%);
+}
+
+/* —— Auras —— */
+.aura-sparkle {
+  box-shadow:
+    0 0 14px 2px rgba(52, 211, 153, 0.55),
+    inset 0 0 8px rgba(255, 255, 255, 0.18);
+}
+.aura-corrupt {
+  box-shadow:
+    0 0 12px 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 14px rgba(0, 0, 0, 0.4);
+}
+.aura-target {
+  box-shadow:
+    0 0 0 3px rgba(245, 166, 35, 0.9),
+    0 0 22px 4px rgba(245, 166, 35, 0.55);
+}
+.aura-rubble {
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
+  filter: grayscale(80%) brightness(0.6);
+}
+
+/* —— Animations —— */
+@keyframes float-up {
+  0% {
+    transform: translateY(6px) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-26px) scale(1.1);
+    opacity: 0;
+  }
+}
+.float-up {
+  animation: float-up 2.4s ease-out infinite;
+}
+.float-up-2 {
+  animation: float-up 2.4s ease-out infinite;
+  animation-delay: 0.7s;
+}
+.float-up-3 {
+  animation: float-up 2.4s ease-out infinite;
+  animation-delay: 1.4s;
+}
+
+@keyframes smoke-rise {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -38px) scale(1.6);
+    opacity: 0;
+  }
+}
+.smoke {
+  animation: smoke-rise 3s ease-out infinite;
+}
+.smoke-2 {
+  animation: smoke-rise 3s ease-out infinite;
+  animation-delay: 1s;
+}
+.smoke-3 {
+  animation: smoke-rise 3s ease-out infinite;
+  animation-delay: 2s;
+}
+
+@keyframes lightning {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  14% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0;
+  }
+}
+.lightning-flash {
+  animation: lightning 1.6s ease-in-out 1;
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.wobble {
+  animation: wobble 2.4s ease-in-out infinite;
+}
+
+@keyframes cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.cursor-blink {
+  animation: cursor-blink 1s steps(2) infinite;
+}
+
+/* Road dashes */
+.road-h::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  background:
+    repeating-linear-gradient(to right, #facc15 0 8px, transparent 8px 16px);
+}
+.road-v::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background:
+    repeating-linear-gradient(to bottom, #facc15 0 8px, transparent 8px 16px);
+}
+
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.4);
+  border-radius: 3px;
+}
