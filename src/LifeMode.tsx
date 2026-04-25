@@ -10,6 +10,8 @@ import {
   Volume2,
   VolumeX,
   Shield,
+  Download,
+  Share2,
 } from 'lucide-react';
 import { audio, TypewriterLine } from './App';
 
@@ -430,71 +432,300 @@ function LifeChapterIntro({ scenario, onDone }: { scenario: LifeScenario; onDone
   );
 }
 
-// ── DRAG DECISION — interactive pull mechanic ──────────────────────────────
+// ── DRAG DECISION — interactive pull mechanic with tension ────────────────
+
+const DECISION_DURATION_MS = 10000; // 10 second countdown
+
+function WatchingEyes({ urgency }: { urgency: number }) {
+  // urgency: 0 → 1 (more time elapsed = more visible)
+  const baseOpacity = 0.18 + urgency * 0.65;
+  const baseScale = 1 + urgency * 0.5;
+  const blinkAt = urgency > 0.6 ? 1 : 0;
+  return (
+    <>
+      <motion.div
+        className="pointer-events-none absolute -top-3 left-2 select-none"
+        animate={{
+          opacity: baseOpacity,
+          scale: baseScale,
+          y: blinkAt ? [0, -2, 0] : 0,
+        }}
+        transition={{ duration: 0.6, y: { duration: 0.4, repeat: blinkAt ? Infinity : 0 } }}
+        style={{ fontSize: 22 + urgency * 14 }}
+      >
+        👀
+      </motion.div>
+      <motion.div
+        className="pointer-events-none absolute -top-2 right-3 select-none"
+        animate={{
+          opacity: baseOpacity * 0.9,
+          scale: baseScale,
+        }}
+        transition={{ duration: 0.6 }}
+        style={{ fontSize: 22 + urgency * 12 }}
+      >
+        👁️
+      </motion.div>
+      <motion.div
+        className="pointer-events-none absolute -bottom-1 left-1/4 select-none"
+        animate={{
+          opacity: baseOpacity * 0.8,
+          scale: baseScale * 0.9,
+        }}
+        transition={{ duration: 0.6 }}
+        style={{ fontSize: 18 + urgency * 12 }}
+      >
+        👀
+      </motion.div>
+      <motion.div
+        className="pointer-events-none absolute -bottom-2 right-1/4 select-none"
+        animate={{
+          opacity: baseOpacity,
+          scale: baseScale * 0.9,
+        }}
+        transition={{ duration: 0.6 }}
+        style={{ fontSize: 18 + urgency * 12 }}
+      >
+        👁️
+      </motion.div>
+    </>
+  );
+}
+
+const HOLD_MS = 1500;
 
 function DragDecision({
-  scenario, onDecide,
-}: { scenario: LifeScenario; onDecide: (i: number) => void }) {
+  scenario, onDecide, onHoldUsed,
+}: { scenario: LifeScenario; onDecide: (i: number) => void; onHoldUsed?: () => void }) {
   const [committed, setCommitted] = useState<null | 0 | 1>(null);
   const [hoverSide, setHoverSide] = useState<null | 'left' | 'right'>(null);
+  const [timerProgress, setTimerProgress] = useState(0); // 0 → 1
+  const committedRef = useRef<null | 0 | 1>(null);
+
+  // ── HOLD-to-confirm state ──
+  const [holdSide, setHoldSide] = useState<null | 0 | 1>(null);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdSideRef = useRef<null | 0 | 1>(null);
+  const lastHoldTickRef = useRef(0);
+
+  useEffect(() => {
+    holdSideRef.current = holdSide;
+    if (holdSide === null) {
+      setHoldProgress(0);
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    lastHoldTickRef.current = start;
+    const loop = () => {
+      if (holdSideRef.current === null || committedRef.current !== null) return;
+      const elapsed = performance.now() - start;
+      const p = Math.min(1, elapsed / HOLD_MS);
+      setHoldProgress(p);
+      // Tick sound every 250ms during hold
+      if (performance.now() - lastHoldTickRef.current > 250) {
+        audio.tick();
+        lastHoldTickRef.current = performance.now();
+      }
+      if (p < 1) {
+        raf = requestAnimationFrame(loop);
+      } else {
+        // Hold completed — commit!
+        onHoldUsed?.();
+        commit(holdSide);
+        holdSideRef.current = null;
+        setHoldSide(null);
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [holdSide]);
+
+  function startHold(idx: 0 | 1) {
+    if (committed !== null) return;
+    setHoldSide(idx);
+  }
+
+  function endHold() {
+    setHoldSide(null);
+  }
+
+  // Countdown timer with rising-intensity heartbeat
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    let lastBeat = start;
+    let tickCount = 0;
+
+    const loop = () => {
+      if (committedRef.current !== null) return;
+      const elapsed = performance.now() - start;
+      const p = Math.min(1, elapsed / DECISION_DURATION_MS);
+      setTimerProgress(p);
+
+      // Heartbeat — interval shortens as tension rises (700ms → 250ms)
+      const beatInterval = 700 - p * 450;
+      if (performance.now() - lastBeat > beatInterval) {
+        audio.heartbeat(0.5 + p * 0.7);
+        lastBeat = performance.now();
+      }
+
+      // Sharp ticks in the last 3 seconds
+      if (p > 0.7) {
+        const tickAt = Math.floor((elapsed - DECISION_DURATION_MS * 0.7) / 1000);
+        if (tickAt > tickCount) {
+          tickCount = tickAt;
+          audio.tick();
+        }
+      }
+
+      if (p < 1 && committedRef.current === null) {
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   function commit(idx: 0 | 1) {
     if (committed !== null) return;
+    committedRef.current = idx;
     setCommitted(idx);
     if (scenario.options[idx].isHonest) audio.coin();
     else audio.hammer();
     setTimeout(() => onDecide(idx), 700);
   }
 
+  const urgency = timerProgress;
+  const timeLeft = Math.max(0, Math.ceil((DECISION_DURATION_MS / 1000) * (1 - timerProgress)));
+
   return (
-    <div className="relative mt-3 h-72 w-full sm:h-80">
+    <div className="relative mt-3 w-full">
+      {/* Tension countdown bar */}
+      <div className="relative mb-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{
+            width: `${(1 - timerProgress) * 100}%`,
+            background:
+              urgency > 0.7
+                ? 'linear-gradient(90deg, #f43f5e, #ea580c)'
+                : urgency > 0.4
+                  ? 'linear-gradient(90deg, #facc15, #f97316)'
+                  : 'linear-gradient(90deg, #34d399, #facc15)',
+          }}
+        />
+        {urgency > 0.75 && (
+          <motion.div
+            className="absolute inset-0 bg-rose-500/40"
+            animate={{ opacity: [0, 0.7, 0] }}
+            transition={{ repeat: Infinity, duration: 0.45 }}
+          />
+        )}
+      </div>
+      <div className="absolute -top-1 right-0 text-[10px] font-bold uppercase tracking-widest text-white/65">
+        Vaqt: <span className={urgency > 0.7 ? 'text-rose-300' : urgency > 0.4 ? 'text-amber-300' : 'text-emerald-300'}>{timeLeft}s</span>
+      </div>
+
+      {/* Decision area with watching eyes */}
+      <div className="relative h-72 w-full sm:h-80">
+        <WatchingEyes urgency={urgency} />
+
+        {/* Red vignette during high tension */}
+        {urgency > 0.7 && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 rounded-3xl"
+            animate={{ opacity: [0.15, 0.4, 0.15] }}
+            transition={{ repeat: Infinity, duration: 0.8 }}
+            style={{
+              background:
+                'radial-gradient(ellipse at center, transparent 40%, rgba(244,63,94,0.25) 100%)',
+            }}
+          />
+        )}
       {/* LEFT zone — Option A */}
       <motion.button
         type="button"
-        onClick={() => commit(0)}
+        onPointerDown={() => startHold(0)}
+        onPointerUp={endHold}
+        onPointerLeave={endHold}
+        onPointerCancel={endHold}
         animate={{
-          scale: hoverSide === 'left' ? 1.06 : 1,
+          scale: hoverSide === 'left' || holdSide === 0 ? 1.06 : 1,
           opacity: committed === 1 ? 0.25 : 1,
-          borderColor: hoverSide === 'left' ? 'rgba(52,211,153,0.85)' : 'rgba(255,255,255,0.18)',
+          borderColor: hoverSide === 'left' || holdSide === 0 ? 'rgba(52,211,153,0.85)' : 'rgba(255,255,255,0.18)',
           backgroundColor: hoverSide === 'left' ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.06)',
+          x: holdSide === 0 ? [0, -2, 2, -1, 1, 0] : 0,
         }}
-        whileHover={{ scale: 1.03 }}
-        className="absolute left-0 top-1/2 w-[40%] max-w-[260px] -translate-y-1/2 rounded-2xl border-2 p-3 text-left backdrop-blur transition-colors disabled:cursor-not-allowed sm:p-4"
+        transition={{ x: { duration: 0.15, repeat: holdSide === 0 ? Infinity : 0 } }}
+        className="absolute left-0 top-1/2 w-[40%] max-w-[260px] -translate-y-1/2 overflow-hidden rounded-2xl border-2 p-3 text-left backdrop-blur transition-colors disabled:cursor-not-allowed sm:p-4 select-none touch-none"
         disabled={committed !== null}
+        style={{ touchAction: 'none' }}
       >
-        <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400 text-base font-black text-slate-900 shadow">
-          A
-        </div>
-        <div className="text-[12px] font-bold uppercase tracking-wider text-emerald-300/90">
-          ← bu yoqqa sudrang
-        </div>
-        <div className="mt-1 text-[13px] font-semibold leading-snug text-white sm:text-sm">
-          {scenario.options[0].text}
+        {/* Hold fill progress */}
+        {holdSide === 0 && (
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-0"
+            style={{
+              width: `${holdProgress * 100}%`,
+              background: 'linear-gradient(90deg, rgba(52,211,153,0.55), rgba(34,197,94,0.4))',
+              transition: 'width 0.05s linear',
+            }}
+          />
+        )}
+        <div className="relative z-10">
+          <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400 text-base font-black text-slate-900 shadow">
+            A
+          </div>
+          <div className="text-[12px] font-bold uppercase tracking-wider text-emerald-300/90">
+            {holdSide === 0 ? '🔒 Mahkam ushlab turing...' : '← sudrang yoki ushlab turing'}
+          </div>
+          <div className="mt-1 text-[13px] font-semibold leading-snug text-white sm:text-sm">
+            {scenario.options[0].text}
+          </div>
         </div>
       </motion.button>
 
       {/* RIGHT zone — Option B */}
       <motion.button
         type="button"
-        onClick={() => commit(1)}
+        onPointerDown={() => startHold(1)}
+        onPointerUp={endHold}
+        onPointerLeave={endHold}
+        onPointerCancel={endHold}
         animate={{
-          scale: hoverSide === 'right' ? 1.06 : 1,
+          scale: hoverSide === 'right' || holdSide === 1 ? 1.06 : 1,
           opacity: committed === 0 ? 0.25 : 1,
-          borderColor: hoverSide === 'right' ? 'rgba(244,63,94,0.85)' : 'rgba(255,255,255,0.18)',
+          borderColor: hoverSide === 'right' || holdSide === 1 ? 'rgba(244,63,94,0.85)' : 'rgba(255,255,255,0.18)',
           backgroundColor: hoverSide === 'right' ? 'rgba(244,63,94,0.18)' : 'rgba(255,255,255,0.06)',
+          x: holdSide === 1 ? [0, -2, 2, -1, 1, 0] : 0,
         }}
-        whileHover={{ scale: 1.03 }}
-        className="absolute right-0 top-1/2 w-[40%] max-w-[260px] -translate-y-1/2 rounded-2xl border-2 p-3 text-left backdrop-blur transition-colors disabled:cursor-not-allowed sm:p-4"
+        transition={{ x: { duration: 0.15, repeat: holdSide === 1 ? Infinity : 0 } }}
+        className="absolute right-0 top-1/2 w-[40%] max-w-[260px] -translate-y-1/2 overflow-hidden rounded-2xl border-2 p-3 text-left backdrop-blur transition-colors disabled:cursor-not-allowed sm:p-4 select-none touch-none"
         disabled={committed !== null}
+        style={{ touchAction: 'none' }}
       >
-        <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400 text-base font-black text-slate-900 shadow">
-          B
-        </div>
-        <div className="text-right text-[12px] font-bold uppercase tracking-wider text-rose-300/90">
-          bu yoqqa sudrang →
-        </div>
-        <div className="mt-1 text-[13px] font-semibold leading-snug text-white sm:text-sm">
-          {scenario.options[1].text}
+        {/* Hold fill progress */}
+        {holdSide === 1 && (
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 z-0"
+            style={{
+              width: `${holdProgress * 100}%`,
+              background: 'linear-gradient(270deg, rgba(244,63,94,0.55), rgba(225,29,72,0.4))',
+              transition: 'width 0.05s linear',
+            }}
+          />
+        )}
+        <div className="relative z-10">
+          <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400 text-base font-black text-slate-900 shadow">
+            B
+          </div>
+          <div className="text-right text-[12px] font-bold uppercase tracking-wider text-rose-300/90">
+            {holdSide === 1 ? '🔒 Mahkam ushlab turing...' : 'sudrang yoki ushlab turing →'}
+          </div>
+          <div className="mt-1 text-[13px] font-semibold leading-snug text-white sm:text-sm">
+            {scenario.options[1].text}
+          </div>
         </div>
       </motion.button>
 
@@ -546,18 +777,20 @@ function DragDecision({
       <div className="absolute -bottom-2 left-0 right-0 text-center text-[11px] font-medium text-white/55 sm:text-xs">
         {scenario.decisionObject.instruction} — yoki tomonni tanlang
       </div>
+      </div>
     </div>
   );
 }
 
 function LifePitchScene({
-  scenario, step, chosenIdx, onChoose, onContinue,
+  scenario, step, chosenIdx, onChoose, onContinue, onHoldUsed,
 }: {
   scenario: LifeScenario;
   step: 'pitch' | 'reaction';
   chosenIdx: number | null;
   onChoose: (i: number) => void;
   onContinue: () => void;
+  onHoldUsed?: () => void;
 }) {
   const [textDone, setTextDone] = useState(false);
   useEffect(() => { setTextDone(false); }, [scenario.id, step]);
@@ -624,7 +857,7 @@ function LifePitchScene({
 
             {step === 'pitch' ? (
               textDone ? (
-                <DragDecision scenario={scenario} onDecide={onChoose} />
+                <DragDecision scenario={scenario} onDecide={onChoose} onHoldUsed={onHoldUsed} />
               ) : (
                 <div className="text-xs text-white/40 italic mt-3">
                   Gapni tinglang...
@@ -706,15 +939,237 @@ function LifeConsequenceCard({
   );
 }
 
+// ── ACHIEVEMENT SYSTEM ───────────────────────────────────────────────────────
+
+interface Achievement {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  check: (choices: LifeChoice[], usedHold: boolean) => boolean;
+}
+
+const ACHIEVEMENTS: Achievement[] = [
+  {
+    id: 'first-honest',
+    emoji: '🥇',
+    title: 'Birinchi qadam',
+    description: "Hech bo'lmaganda bitta halol qaror qildingiz",
+    check: (c) => c.some((x) => x.isHonest),
+  },
+  {
+    id: 'perfect',
+    emoji: '⭐',
+    title: 'Mukammal Akbar',
+    description: "Barcha 5 dilemma'da halol qaror qildingiz",
+    check: (c) => c.length >= 5 && c.every((x) => x.isHonest),
+  },
+  {
+    id: 'courage',
+    emoji: '💪',
+    title: 'Bardosh',
+    description: "Halol qarorni ushlab turish bilan tasdiqladingiz",
+    check: (_, used) => used,
+  },
+  {
+    id: 'scholar',
+    emoji: '🎓',
+    title: 'Aql ko\'rsatgan',
+    description: "Olimpiada'da otaning yordamini rad etdingiz",
+    check: (c) => c.some((x) => x.scenarioId === 3 && x.isHonest),
+  },
+  {
+    id: 'true-friend',
+    emoji: '🤝',
+    title: 'Haqiqiy do\'st',
+    description: "Bobur'ning sirini yashirmadingiz — rost gapirdingiz",
+    check: (c) => c.some((x) => x.scenarioId === 4 && x.isHonest),
+  },
+  {
+    id: 'mom-pride',
+    emoji: '🌹',
+    title: 'Onaning iftixori',
+    description: "O'qituvchi xonimga konvertli sovg'ani rad etdingiz",
+    check: (c) => c.some((x) => x.scenarioId === 2 && x.isHonest),
+  },
+  {
+    id: 'self-reliant',
+    emoji: '📝',
+    title: "O'zim tayyorlandim",
+    description: "Imtihonda Bobur'ga javob bermadingiz",
+    check: (c) => c.some((x) => x.scenarioId === 1 && x.isHonest),
+  },
+  {
+    id: 'fair-buyer',
+    emoji: '🛒',
+    title: 'Halol iste\'molchi',
+    description: "Cheksiz mahsulotni rad etdingiz — soliq to'lash uchun",
+    check: (c) => c.some((x) => x.scenarioId === 5 && x.isHonest),
+  },
+  {
+    id: 'streak-3',
+    emoji: '🔥',
+    title: 'Halollik seriyasi',
+    description: "3 ta dilemma'da ketma-ket halol qaror qildingiz",
+    check: (c) => {
+      let streak = 0;
+      let max = 0;
+      for (const x of c) {
+        if (x.isHonest) { streak += 1; max = Math.max(max, streak); }
+        else streak = 0;
+      }
+      return max >= 3;
+    },
+  },
+  {
+    id: 'reflection',
+    emoji: '🪞',
+    title: 'Ko\'zguda o\'zini ko\'rgan',
+    description: "Yengil yo'lni tanlab, oqibatini his qildingiz",
+    check: (c) => c.some((x) => !x.isHonest),
+  },
+];
+
+// ── SHAREABLE RESULT CARD GENERATOR ──────────────────────────────────────────
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function generateShareCard(opts: {
+  name: string;
+  emoji: string;
+  honesty: number;
+  honestCount: number;
+  total: number;
+  verdict: string;
+  verdictEmoji: string;
+}): string {
+  const W = 720, H = 1280;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+
+  // Background gradient based on outcome
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  if (opts.honestCount >= 4) {
+    grad.addColorStop(0, '#0d4d2e'); grad.addColorStop(1, '#0f1b2d');
+  } else if (opts.honestCount >= 2) {
+    grad.addColorStop(0, '#5d4d10'); grad.addColorStop(1, '#0f1b2d');
+  } else {
+    grad.addColorStop(0, '#5d1a2a'); grad.addColorStop(1, '#0f1b2d');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Decorative diagonal pattern
+  ctx.fillStyle = 'rgba(245,166,35,0.04)';
+  for (let i = -H; i < W * 2; i += 32) {
+    ctx.save();
+    ctx.translate(i, 0);
+    ctx.rotate(0.6);
+    ctx.fillRect(0, 0, 14, H * 2);
+    ctx.restore();
+  }
+
+  // Top brand
+  ctx.fillStyle = '#facc15';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 38px Inter, system-ui, sans-serif';
+  ctx.fillText('INTEGRITYCITY', W / 2, 90);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '22px Inter, system-ui, sans-serif';
+  ctx.fillText('Halollik daftari', W / 2, 125);
+
+  // Avatar circle backdrop
+  ctx.beginPath();
+  ctx.arc(W / 2, 320, 140, 0, Math.PI * 2);
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fill();
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = '#facc15';
+  ctx.stroke();
+
+  // Avatar emoji
+  ctx.textBaseline = 'middle';
+  ctx.font = '180px sans-serif';
+  ctx.fillText(opts.emoji, W / 2, 320);
+  ctx.textBaseline = 'alphabetic';
+
+  // Name
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 52px Inter, system-ui, sans-serif';
+  ctx.fillText(`${opts.name}, 12 yosh`, W / 2, 530);
+
+  // Verdict emoji + title
+  ctx.font = '110px sans-serif';
+  ctx.fillText(opts.verdictEmoji, W / 2, 670);
+  ctx.fillStyle = '#facc15';
+  ctx.font = 'bold 44px Inter, system-ui, sans-serif';
+  ctx.fillText(opts.verdict, W / 2, 760);
+
+  // Honesty bar
+  const barX = 80, barY = 870, barW = W - 160, barH = 28;
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  roundRect(ctx, barX, barY, barW, barH, 14);
+  const fillW = (opts.honesty / 100) * barW;
+  const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+  if (opts.honesty >= 70) {
+    barGrad.addColorStop(0, '#34d399'); barGrad.addColorStop(1, '#facc15');
+  } else if (opts.honesty >= 40) {
+    barGrad.addColorStop(0, '#facc15'); barGrad.addColorStop(1, '#f97316');
+  } else {
+    barGrad.addColorStop(0, '#f97316'); barGrad.addColorStop(1, '#dc2626');
+  }
+  ctx.fillStyle = barGrad;
+  roundRect(ctx, barX, barY, Math.max(28, fillW), barH, 14);
+
+  // Honesty value
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 36px Inter, system-ui, sans-serif';
+  ctx.fillText(`🛡️ Halollik: ${Math.round(opts.honesty)}/100`, W / 2, 970);
+
+  // Decision counts
+  ctx.font = 'bold 28px Inter, system-ui, sans-serif';
+  ctx.fillStyle = '#34d399';
+  ctx.fillText(`✓ Halol: ${opts.honestCount}/${opts.total}`, W / 2 - 140, 1030);
+  ctx.fillStyle = '#f43f5e';
+  ctx.fillText(`× Yengil: ${opts.total - opts.honestCount}`, W / 2 + 140, 1030);
+
+  // Footer
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '24px Inter, system-ui, sans-serif';
+  ctx.fillText("Sen ham sinab ko'r ↗", W / 2, 1180);
+  ctx.fillStyle = '#facc15';
+  ctx.font = 'bold 28px Inter, system-ui, sans-serif';
+  ctx.fillText('integritycity.uz', W / 2, 1220);
+
+  return canvas.toDataURL('image/png');
+}
+
 function LifeSummary({
-  honesty, choices, onRestart, onExit,
+  honesty, choices, usedHold, onRestart, onExit,
 }: {
   honesty: number;
   choices: LifeChoice[];
+  usedHold: boolean;
   onRestart: () => void;
   onExit: () => void;
 }) {
   const honestCount = choices.filter((c) => c.isHonest).length;
+  const unlockedAchievements = ACHIEVEMENTS.filter((a) => a.check(choices, usedHold));
 
   let title = '';
   let body = '';
@@ -747,6 +1202,32 @@ function LifeSummary({
     else audio.buildComplete();
     setTimeout(() => audio.speak(voicePhrase), 700);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function downloadShareCard() {
+    audio.click();
+    const dataUrl = generateShareCard({
+      name: 'Akbar',
+      emoji: '👦',
+      honesty,
+      honestCount,
+      total: LIFE_SCENARIOS.length,
+      verdict: title,
+      verdictEmoji: emoji,
+    });
+    const link = document.createElement('a');
+    link.download = `integritycity-akbar-${Math.round(honesty)}.png`;
+    link.href = dataUrl;
+    link.click();
+  }
+
+  function shareTelegram() {
+    audio.click();
+    const url = encodeURIComponent('https://integritycity.uz');
+    const text = encodeURIComponent(
+      `Men ${title} bo'ldim — IntegrityCity'da ${Math.round(honesty)}/100 halollik oldim. Sen ham sinab ko'r:`,
+    );
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+  }
 
   return (
     <motion.div
@@ -811,11 +1292,95 @@ function LifeSummary({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      {/* Achievement collection */}
+      <div className="mt-6 rounded-3xl border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-500/[0.06] to-amber-700/[0.04] p-5 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+              🏆 Halollik nishonlari
+            </div>
+            <div className="text-base font-extrabold text-white">
+              {unlockedAchievements.length}/{ACHIEVEMENTS.length} ochildi
+            </div>
+          </div>
+          <div className="rounded-full bg-yellow-400/20 px-3 py-1 text-xs font-bold text-yellow-200">
+            {Math.round((unlockedAchievements.length / ACHIEVEMENTS.length) * 100)}%
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {ACHIEVEMENTS.map((ach) => {
+            const unlocked = unlockedAchievements.includes(ach);
+            return (
+              <motion.div
+                key={ach.id}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: ACHIEVEMENTS.indexOf(ach) * 0.06, type: 'spring', stiffness: 200 }}
+                className={`group relative cursor-help rounded-2xl border p-2.5 text-center transition ${
+                  unlocked
+                    ? 'border-yellow-400/40 bg-yellow-400/[0.08]'
+                    : 'border-white/10 bg-white/[0.02] opacity-30 grayscale'
+                }`}
+                title={ach.description}
+              >
+                <div className="text-3xl">{unlocked ? ach.emoji : '🔒'}</div>
+                <div className="mt-1 text-[10px] font-bold leading-tight text-white sm:text-[11px]">
+                  {ach.title}
+                </div>
+                {/* Tooltip on hover */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-full z-10 mb-2 hidden rounded-lg bg-slate-950 px-2 py-1.5 text-[10px] leading-snug text-white shadow-2xl group-hover:block">
+                  {ach.description}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 text-center text-[11px] text-white/55">
+          Yana o'ynab boshqa nishonlarni oching
+        </div>
+      </div>
+
+      {/* Share section — viral mechanic */}
+      <div className="mt-6 rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-500/10 to-amber-700/5 p-5 shadow-2xl">
+        <div className="mb-3 flex items-center gap-2">
+          <Share2 className="h-5 w-5 text-yellow-300" />
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+              Natijangizni ulashing
+            </div>
+            <div className="text-base font-extrabold text-white">
+              Do'stlaringizni sinab ko'rishga chorlang
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <motion.button
+            whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }}
+            onClick={downloadShareCard}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-4 py-3 font-extrabold text-slate-900 shadow-lg transition hover:bg-yellow-300"
+          >
+            <Download className="h-5 w-5" /> Rasm yuklab olish
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }}
+            onClick={shareTelegram}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-4 py-3 font-extrabold text-white shadow-lg transition hover:bg-sky-400"
+          >
+            <Share2 className="h-5 w-5" /> Telegramga yuborish
+          </motion.button>
+        </div>
+        <div className="mt-2 text-center text-[11px] text-white/60">
+          📥 yuklab olib, do'stlaringizga jo'nating — kim ko'proq halollik oladi?
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <motion.button
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           onClick={() => { audio.click(); onRestart(); }}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-yellow-400 px-6 py-4 font-black text-slate-900 transition hover:bg-yellow-300"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-6 py-4 font-black text-white transition hover:bg-white/20"
         >
           <RotateCcw className="h-5 w-5" /> Yana o'ynash
         </motion.button>
@@ -844,6 +1409,7 @@ export function LifeMode({ onExit }: { onExit: () => void }) {
   const [honesty, setHonesty] = useState(50);
   const [choices, setChoices] = useState<LifeChoice[]>([]);
   const [muted, setMuted] = useState(false);
+  const [usedHold, setUsedHold] = useState(false);
 
   const scenario = LIFE_SCENARIOS[scenarioIdx];
 
@@ -893,6 +1459,7 @@ export function LifeMode({ onExit }: { onExit: () => void }) {
     setChosenIdx(null);
     setHonesty(50);
     setChoices([]);
+    setUsedHold(false);
   }
 
   function toggleMute() {
@@ -937,6 +1504,7 @@ export function LifeMode({ onExit }: { onExit: () => void }) {
           chosenIdx={chosenIdx}
           onChoose={handleChoose}
           onContinue={continueAfterReaction}
+          onHoldUsed={() => setUsedHold(true)}
         />
       )}
       {phase === 'consequence' && scenario && chosenIdx !== null && (
@@ -952,6 +1520,7 @@ export function LifeMode({ onExit }: { onExit: () => void }) {
         <LifeSummary
           honesty={honesty}
           choices={choices}
+          usedHold={usedHold}
           onRestart={restart}
           onExit={onExit}
         />

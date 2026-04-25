@@ -66,6 +66,17 @@ class AudioFX {
     this.osc(720, 0.06, 0.09, 'square');
   }
 
+  heartbeat(intensity = 1) {
+    // Low thump — used for rising tension during a timed decision
+    this.osc(58, 0.09, 0.18 * intensity, 'sine');
+    this.osc(40, 0.13, 0.12 * intensity, 'sine', 0.04);
+  }
+
+  tick() {
+    // Sharp clock tick — used for last seconds of countdown
+    this.osc(2200, 0.04, 0.08, 'square');
+  }
+
   coin() {
     this.osc(880, 0.08, 0.18, 'triangle');
     this.osc(1320, 0.1, 0.18, 'triangle', 0.06);
@@ -2057,6 +2068,213 @@ function FriendBanner({ friend }: { friend: Friend }) {
 //  START / GAME OVER
 // ============================================================================
 
+// ============================================================================
+//  INTRO CINEMATIC — first impression hook (~20s)
+// ============================================================================
+
+interface IntroScene {
+  bg: string;            // tailwind gradient
+  emoji: string;         // big focal emoji (or list)
+  title: string;
+  subtitle?: string;
+  durationMs: number;
+  audioCue?: 'chime' | 'beat' | 'sparkle' | 'thump';
+}
+
+const INTRO_SCENES: IntroScene[] = [
+  {
+    bg: 'from-amber-300 via-orange-500 to-rose-700',
+    emoji: '🌅',
+    title: "Bu — sizning shahringiz",
+    subtitle: 'Toshkent. Tong otmoqda. Ko\'chalar uyg\'onmoqda...',
+    durationMs: 3200,
+    audioCue: 'chime',
+  },
+  {
+    bg: 'from-sky-700 via-indigo-800 to-slate-900',
+    emoji: '👦 👧 🧒 🧔',
+    title: 'Bu — sizning shahringizdagi odamlar',
+    subtitle: "Akbar, Munisa, Bobur, Karim aka — har biri o'z hayotida",
+    durationMs: 3500,
+    audioCue: 'beat',
+  },
+  {
+    bg: 'from-rose-700 via-purple-800 to-slate-950',
+    emoji: '📝 🎁 💵 🪟 🎧',
+    title: "Bugun sizni dilemmalar kutmoqda",
+    subtitle: "Imtihon, sovg'a, pul, sir, mahsulot — har biri tanlov",
+    durationMs: 3800,
+    audioCue: 'thump',
+  },
+  {
+    bg: 'from-yellow-600 via-amber-700 to-stone-950',
+    emoji: '⚖️',
+    title: "Halol qaror qilasizmi?",
+    subtitle: "Yoki yengil yo'lni tanlaysizmi?",
+    durationMs: 3500,
+    audioCue: 'beat',
+  },
+  {
+    bg: 'from-emerald-700 via-teal-800 to-slate-950',
+    emoji: '🏙️',
+    title: 'INTEGRITY CITY',
+    subtitle: "Bilim emas — TAJRIBA. Halollikni qo'lingiz bilan his qiling.",
+    durationMs: 4500,
+    audioCue: 'sparkle',
+  },
+];
+
+function IntroCinematic({ onDone }: { onDone: () => void }) {
+  const [sceneIdx, setSceneIdx] = useState(0);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
+  useEffect(() => {
+    audio.unlock();
+    if (sceneIdx >= INTRO_SCENES.length) {
+      onDoneRef.current();
+      return;
+    }
+    const scene = INTRO_SCENES[sceneIdx];
+    // Audio cue per scene
+    if (scene.audioCue === 'chime') audio.coin();
+    if (scene.audioCue === 'beat') audio.heartbeat(0.4);
+    if (scene.audioCue === 'thump') audio.disaster();
+    if (scene.audioCue === 'sparkle') audio.victory();
+
+    const t = setTimeout(() => setSceneIdx((i) => i + 1), scene.durationMs);
+    return () => clearTimeout(t);
+  }, [sceneIdx]);
+
+  function skip() {
+    audio.click();
+    onDoneRef.current();
+  }
+
+  if (sceneIdx >= INTRO_SCENES.length) return null;
+  const scene = INTRO_SCENES[sceneIdx];
+  const totalDuration = INTRO_SCENES.reduce((s, x) => s + x.durationMs, 0);
+  const elapsedDuration = INTRO_SCENES.slice(0, sceneIdx).reduce((s, x) => s + x.durationMs, 0);
+
+  return (
+    <motion.div
+      key={sceneIdx}
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
+    >
+      {/* Animated gradient background */}
+      <motion.div
+        key={`bg-${sceneIdx}`}
+        className={`absolute inset-0 bg-gradient-to-br ${scene.bg}`}
+        initial={{ scale: 1.1, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.8 }}
+      />
+
+      {/* Pattern overlay */}
+      <motion.div
+        key={`pattern-${sceneIdx}`}
+        className="absolute inset-0 opacity-10"
+        animate={{ backgroundPositionX: ['0%', '100%'] }}
+        transition={{ repeat: Infinity, duration: 12, ease: 'linear' }}
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0 12px, transparent 12px 32px)',
+        }}
+      />
+
+      {/* Vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%)',
+        }}
+      />
+
+      {/* Content */}
+      <motion.div
+        key={`content-${sceneIdx}`}
+        initial={{ y: 30, opacity: 0, scale: 0.9 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        transition={{ duration: 0.7, delay: 0.2 }}
+        className="relative z-10 px-4 text-center"
+      >
+        <motion.div
+          initial={{ scale: 0, rotate: -10 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.4, type: 'spring', stiffness: 180 }}
+          className="text-7xl drop-shadow-2xl sm:text-9xl"
+          style={{ letterSpacing: '0.2em' }}
+        >
+          {scene.emoji}
+        </motion.div>
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.6 }}
+          className="mt-6 text-3xl font-black leading-tight text-white drop-shadow-lg sm:text-5xl"
+        >
+          {scene.title}
+        </motion.div>
+        {scene.subtitle && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 0.9 }}
+            transition={{ delay: 1.2, duration: 0.6 }}
+            className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-xl"
+          >
+            {scene.subtitle}
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Bottom: progress bar + skip */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-3 px-4 pb-6 sm:px-8 sm:pb-8">
+        <div className="flex flex-1 gap-1.5">
+          {INTRO_SCENES.map((_, i) => (
+            <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/20">
+              {i < sceneIdx && <div className="h-full w-full bg-white" />}
+              {i === sceneIdx && (
+                <motion.div
+                  className="h-full bg-white"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: scene.durationMs / 1000, ease: 'linear' }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={skip}
+          className="rounded-xl bg-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white backdrop-blur transition hover:bg-white/25 sm:text-sm"
+        >
+          O'tkazish →
+        </button>
+      </div>
+
+      {/* Final scene CTA */}
+      {sceneIdx === INTRO_SCENES.length - 1 && (
+        <motion.button
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2, duration: 0.6 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={skip}
+          className="absolute z-30 mt-72 rounded-2xl bg-yellow-400 px-8 py-4 text-lg font-black text-slate-900 shadow-2xl transition hover:bg-yellow-300"
+          style={{ marginTop: '20rem' }}
+        >
+          🎮 Boshlash
+        </motion.button>
+      )}
+    </motion.div>
+  );
+}
+
 function StartScreen({
   onStartMayor, onStartLife,
 }: { onStartMayor: () => void; onStartLife: () => void }) {
@@ -2357,6 +2575,7 @@ const CELEBRATION_MS = 1900;
 type GameMode = 'menu' | 'mayor' | 'life';
 
 export default function App() {
+  const [introDone, setIntroDone] = useState(false);
   const [mode, setMode] = useState<GameMode>('menu');
   const [phase, setPhase] = useState<Phase>('start');
   const [budget, setBudget] = useState(10000);
@@ -2684,6 +2903,10 @@ export default function App() {
       >
         {displayIntegrity >= 50 ? '☀️' : '🌫️'}
       </motion.div>
+
+      {!introDone && (
+        <IntroCinematic onDone={() => setIntroDone(true)} />
+      )}
 
       {mode === 'life' ? (
         <LifeMode onExit={exitToMenu} />
