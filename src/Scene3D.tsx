@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, RoundedBox, Sparkles, Cloud } from '@react-three/drei';
-import { useRef, useEffect, useMemo } from 'react';
+import { OrbitControls, RoundedBox, Sparkles, Cloud, ContactShadows } from '@react-three/drei';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 
 export type BuildingId = 'maktab' | 'shifoxona' | 'yollar' | 'chiroqlar' | 'bogcha';
@@ -22,13 +22,14 @@ export type BuildingsMap = Record<BuildingId, BuildingState>;
 //  CITY CONSTANTS
 // ============================================================================
 
-const PLOT_POSITIONS: Record<BuildingId, [number, number, number]> = {
-  maktab: [-3.5, 0, -3.5],
-  shifoxona: [3.5, 0, -3.5],
-  yollar: [-3.5, 0, 0],
-  chiroqlar: [3.5, 0, 0],
-  bogcha: [0, 0, 3.5],
-};
+// 5 plot positions on the city grid — buildings can go anywhere
+export const PLOT_POSITIONS: [number, number, number][] = [
+  [-3.5, 0, -3.5], // top-left
+  [3.5, 0, -3.5],  // top-right
+  [-3.5, 0, 0],    // middle-left
+  [3.5, 0, 0],     // middle-right
+  [0, 0, 3.5],     // bottom-center
+];
 
 // Muted, realistic palette — less "lego" toy colors, more like real buildings
 const BUILDING_PALETTE: Record<BuildingId, { body: string; roof: string; window: string }> = {
@@ -653,24 +654,79 @@ function RuinedBuilding({ buildingId }: { buildingId: BuildingId }) {
   );
 }
 
-// ── Empty plot (qurilmagan) ──────────────────────────────────────────────────
+// ── Empty plot — clickable ───────────────────────────────────────────────────
 
-function EmptyPlot() {
+function EmptyPlot({ plotIdx, onClick }: { plotIdx: number; onClick?: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const markerRef = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    if (markerRef.current) {
+      const t = Date.now() * 0.003;
+      markerRef.current.position.y = 0.55 + Math.sin(t) * 0.12;
+      markerRef.current.rotation.y = t * 0.5;
+    }
+  });
+
+  useEffect(() => {
+    if (hovered) document.body.style.cursor = 'pointer';
+    return () => { document.body.style.cursor = ''; };
+  }, [hovered]);
+
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <planeGeometry args={[2, 1.6]} />
-        <meshStandardMaterial color="#92400e" />
+      {/* Soil/dirt patch */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.025, 0]}
+        receiveShadow
+        onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerOut={() => setHovered(false)}
+      >
+        <planeGeometry args={[2.2, 1.8]} />
+        <meshStandardMaterial color={hovered ? '#a85a18' : '#7a4818'} roughness={1} />
       </mesh>
-      {/* Construction sign */}
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.6, 0.04]} />
-        <meshStandardMaterial color="#facc15" />
-      </mesh>
-      <mesh position={[0, 0.5, 0.03]}>
-        <planeGeometry args={[0.4, 0.4]} />
+
+      {/* Glowing border ring when hovered */}
+      {hovered && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+          <ringGeometry args={[1.05, 1.15, 32]} />
+          <meshBasicMaterial color="#facc15" transparent opacity={0.6} />
+        </mesh>
+      )}
+
+      {/* Floating plus sign */}
+      <group ref={markerRef} position={[0, 0.55, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.6, 0.12, 0.12]} />
+          <meshStandardMaterial color="#facc15" emissive="#facc15" emissiveIntensity={hovered ? 0.6 : 0.25} roughness={0.4} />
+        </mesh>
+        <mesh castShadow>
+          <boxGeometry args={[0.12, 0.6, 0.12]} />
+          <meshStandardMaterial color="#facc15" emissive="#facc15" emissiveIntensity={hovered ? 0.6 : 0.25} roughness={0.4} />
+        </mesh>
+      </group>
+
+      {/* Plot number plate */}
+      <mesh position={[0, 0.05, 0.85]} rotation={[-Math.PI / 4, 0, 0]}>
+        <planeGeometry args={[0.4, 0.18]} />
         <meshStandardMaterial color="#1c1917" />
       </mesh>
+
+      {/* Traffic cones at corners */}
+      {[[-0.95, -0.75], [0.95, -0.75], [-0.95, 0.75], [0.95, 0.75]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, 0.18, 0]} castShadow>
+            <coneGeometry args={[0.12, 0.36, 8]} />
+            <meshStandardMaterial color="#ea580c" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.18, 0]}>
+            <coneGeometry args={[0.13, 0.05, 8]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -767,14 +823,129 @@ function ConstructionSite({
           <Worker />
         </group>
       )}
+      {/* Second worker on the other side */}
+      {stage >= 1 && stage < 3 && (
+        <group position={[1.5, 0, 1.5]}>
+          <Worker />
+        </group>
+      )}
+
+      {/* Cement mixer with rotating drum */}
+      {stage < 3 && <CementMixer />}
+
+      {/* Brick pile */}
+      {stage < 2 && <BrickPile />}
+
+      {/* Scaffolding around the building during walls stage */}
+      {stage === 2 && <Scaffolding />}
 
       {/* Dust */}
-      {stage < 3 && fragile && (
-        <Sparkles count={8} scale={[2, 1, 2]} size={1.5} color="#a8a29e" speed={0.6} position={[0, 0.5, 0]} />
-      )}
       {stage < 3 && (
-        <Sparkles count={14} scale={[2.5, 1.2, 2]} size={2} color="#fef9c3" speed={0.4} position={[0, 0.6, 0]} />
+        <Sparkles count={14} scale={[2.5, 1.2, 2]} size={2} color="#d4d0c4" speed={0.4} position={[0, 0.6, 0]} />
       )}
+    </group>
+  );
+}
+
+function CementMixer() {
+  const drumRef = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (drumRef.current) drumRef.current.rotation.z = Date.now() * 0.003;
+  });
+  return (
+    <group position={[1.5, 0, -1.6]}>
+      {/* Body */}
+      <mesh position={[0, 0.18, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.3, 0.5]} />
+        <meshStandardMaterial color="#d4a020" roughness={0.6} metalness={0.3} />
+      </mesh>
+      {/* Drum (rotating) */}
+      <mesh ref={drumRef} position={[0, 0.45, 0]} rotation={[0.4, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.18, 0.22, 0.45, 12]} />
+        <meshStandardMaterial color="#a8a29e" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Wheels */}
+      {[[-0.18, 0.22], [0.18, 0.22], [-0.18, -0.22], [0.18, -0.22]].map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.07, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 0.04, 12]} />
+          <meshStandardMaterial color="#1c1917" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function BrickPile() {
+  const bricks = useMemo(() => {
+    const arr: { p: [number, number, number]; rot: number; color: string }[] = [];
+    const colors = ['#a04030', '#8a3525', '#b04835'];
+    for (let i = 0; i < 8; i++) {
+      arr.push({
+        p: [
+          Math.sin(i * 1.7) * 0.18,
+          0.04 + Math.floor(i / 3) * 0.08,
+          Math.cos(i * 1.3) * 0.15,
+        ] as [number, number, number],
+        rot: (i * 23) % Math.PI,
+        color: colors[i % colors.length],
+      });
+    }
+    return arr;
+  }, []);
+  return (
+    <group position={[-1.5, 0, 1.5]}>
+      {bricks.map((b, i) => (
+        <mesh key={i} position={b.p} rotation={[0, b.rot, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.08, 0.12]} />
+          <meshStandardMaterial color={b.color} roughness={0.95} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function Scaffolding() {
+  // 4 corner posts + horizontal cross beams forming a frame around the building
+  const posts: [number, number][] = [[-1.2, 1.0], [1.2, 1.0], [-1.2, -1.0], [1.2, -1.0]];
+  return (
+    <group>
+      {posts.map(([x, z], i) => (
+        <mesh key={`p-${i}`} position={[x, 0.95, z]} castShadow>
+          <cylinderGeometry args={[0.04, 0.04, 1.9, 6]} />
+          <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.5} />
+        </mesh>
+      ))}
+      {/* Top beams (4 sides) */}
+      <mesh position={[0, 1.85, 1.0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.035, 0.035, 2.4, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 1.85, -1.0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.035, 0.035, 2.4, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.5} />
+      </mesh>
+      <mesh position={[1.2, 1.85, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.035, 0.035, 2.0, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.5} />
+      </mesh>
+      <mesh position={[-1.2, 1.85, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.035, 0.035, 2.0, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.5} />
+      </mesh>
+      {/* Mid beams */}
+      <mesh position={[0, 1.0, 1.0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2.4, 6]} />
+        <meshStandardMaterial color="#a8a29e" />
+      </mesh>
+      <mesh position={[0, 1.0, -1.0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2.4, 6]} />
+        <meshStandardMaterial color="#a8a29e" />
+      </mesh>
+      {/* Wooden walkway plank at mid-height */}
+      <mesh position={[0, 1.05, 1.0]} castShadow>
+        <boxGeometry args={[2.4, 0.04, 0.2]} />
+        <meshStandardMaterial color="#8b5a2b" roughness={0.95} />
+      </mesh>
     </group>
   );
 }
@@ -848,33 +1019,42 @@ function Worker() {
 }
 
 // ============================================================================
-//  PLOT NODE — picks the right component
+//  PLOT NODE — index-based, supports empty (clickable) state
 // ============================================================================
 
+export interface PlotData {
+  buildingId: BuildingId | null;
+  state: BuildingState;
+}
+
 function PlotNode({
-  buildingId,
-  state,
+  plotIdx,
+  plot,
   position,
   isConstructing,
   buildStage,
+  onClick,
 }: {
-  buildingId: BuildingId;
-  state: BuildingState;
+  plotIdx: number;
+  plot: PlotData;
   position: [number, number, number];
   isConstructing: boolean;
   buildStage: number;
+  onClick?: () => void;
 }) {
   let content: React.ReactNode;
-  if (isConstructing && state.status === 'qurilyapti') {
-    content = <ConstructionSite buildingId={buildingId} stage={buildStage} fragile={state.isFragile} />;
-  } else if (state.status === 'alo') {
-    content = <FinishedBuilding buildingId={buildingId} fragile={state.isFragile} />;
-  } else if (state.status === 'shikastlangan') {
-    content = <DamagedBuilding buildingId={buildingId} />;
-  } else if (state.status === 'vayrona') {
-    content = <RuinedBuilding buildingId={buildingId} />;
+  if (!plot.buildingId || plot.state.status === 'qurilmagan') {
+    content = <EmptyPlot plotIdx={plotIdx} onClick={onClick} />;
+  } else if (isConstructing && plot.state.status === 'qurilyapti') {
+    content = <ConstructionSite buildingId={plot.buildingId} stage={buildStage} fragile={plot.state.isFragile} />;
+  } else if (plot.state.status === 'alo') {
+    content = <FinishedBuilding buildingId={plot.buildingId} fragile={plot.state.isFragile} />;
+  } else if (plot.state.status === 'shikastlangan') {
+    content = <DamagedBuilding buildingId={plot.buildingId} />;
+  } else if (plot.state.status === 'vayrona') {
+    content = <RuinedBuilding buildingId={plot.buildingId} />;
   } else {
-    content = <EmptyPlot />;
+    content = <EmptyPlot plotIdx={plotIdx} onClick={onClick} />;
   }
 
   return <group position={position}>{content}</group>;
@@ -924,22 +1104,19 @@ function Car({
 
 function CameraController({
   target,
-  zoom,
+  closeUp,
 }: {
   target: [number, number, number];
-  zoom: number;
+  closeUp: boolean;
 }) {
   const { camera } = useThree();
-  const targetVec = useRef(new THREE.Vector3(...target));
-
-  useEffect(() => {
-    targetVec.current.set(...target);
-  }, [target]);
 
   useFrame((_, dt) => {
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, target[0] + zoom * 0.7, 1.4, dt);
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, target[1] + zoom * 0.7, 1.4, dt);
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, target[2] + zoom, 1.4, dt);
+    // closeUp = constructing → zoom in low orbit; idle → tighter top-down
+    const offset = closeUp ? { x: 5, y: 6, z: 5 } : { x: 7, y: 11, z: 7 };
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, target[0] + offset.x, 1.6, dt);
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, target[1] + offset.y, 1.6, dt);
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, target[2] + offset.z, 1.6, dt);
     camera.lookAt(target[0], target[1], target[2]);
   });
 
@@ -951,11 +1128,12 @@ function CameraController({
 // ============================================================================
 
 interface Scene3DProps {
-  buildings: BuildingsMap;
-  constructingId: BuildingId | null;
+  plots: PlotData[];                     // 5 plots
+  constructingPlotIdx: number | null;
   buildStage: number;
   shakeKey: number;
   skyColor: { top: string; bot: string };
+  onPlotClick?: (plotIdx: number) => void;
 }
 
 function ShakingGroup({ shakeKey, children }: { shakeKey: number; children: React.ReactNode }) {
@@ -982,58 +1160,54 @@ function ShakingGroup({ shakeKey, children }: { shakeKey: number; children: Reac
 }
 
 export function Scene3D({
-  buildings,
-  constructingId,
+  plots,
+  constructingPlotIdx,
   buildStage,
   shakeKey,
   skyColor,
+  onPlotClick,
 }: Scene3DProps) {
-  // Camera target follows the constructing plot
-  const cameraTarget: [number, number, number] = constructingId
-    ? PLOT_POSITIONS[constructingId]
-    : [0, 0, 0];
-  const cameraZoom = constructingId ? 6 : 11;
+  const cameraTarget: [number, number, number] =
+    constructingPlotIdx !== null ? PLOT_POSITIONS[constructingPlotIdx] : [0, 0, 0];
 
   return (
     <Canvas
       shadows
-      camera={{ position: [11, 11, 11], fov: 35 }}
+      camera={{ position: [8, 12, 8], fov: 30 }}
       gl={{ antialias: true }}
       dpr={[1, 2]}
     >
-      {/* Sky color via background */}
       <color attach="background" args={[skyColor.top]} />
-      <fog attach="fog" args={[skyColor.bot, 18, 50]} />
+      <fog attach="fog" args={[skyColor.bot, 14, 38]} />
 
-      <hemisphereLight args={[skyColor.top, '#86efac', 0.6]} />
-      <ambientLight intensity={0.35} />
+      <hemisphereLight args={[skyColor.top, '#7a9266', 0.55]} />
+      <ambientLight intensity={0.32} />
       <directionalLight
-        position={[10, 18, 6]}
-        intensity={1.2}
+        position={[8, 16, 5]}
+        intensity={1.15}
         castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-15}
-        shadow-camera-right={15}
-        shadow-camera-top={15}
-        shadow-camera-bottom={-15}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-12}
+        shadow-camera-right={12}
+        shadow-camera-top={12}
+        shadow-camera-bottom={-12}
       />
 
       <ShakingGroup shakeKey={shakeKey}>
         <Ground />
         <Roads />
 
-        {(Object.entries(buildings) as [BuildingId, BuildingState][]).map(
-          ([id, state]) => (
-            <PlotNode
-              key={id}
-              buildingId={id}
-              state={state}
-              position={PLOT_POSITIONS[id]}
-              isConstructing={constructingId === id}
-              buildStage={buildStage}
-            />
-          ),
-        )}
+        {plots.map((plot, i) => (
+          <PlotNode
+            key={i}
+            plotIdx={i}
+            plot={plot}
+            position={PLOT_POSITIONS[i]}
+            isConstructing={constructingPlotIdx === i}
+            buildStage={buildStage}
+            onClick={onPlotClick ? () => onPlotClick(i) : undefined}
+          />
+        ))}
 
         {HOUSE_POSITIONS.map((h, i) => (
           <House key={`h-${i}`} position={h.pos} color={h.color} roof={h.roof} />
@@ -1053,19 +1227,21 @@ export function Scene3D({
         {CITIZEN_PATHS.map((p, i) => (
           <Citizen key={`cit-${i}`} {...p} />
         ))}
+
+        <ContactShadows position={[0, 0.05, 0]} opacity={0.4} scale={20} blur={2} far={4} />
       </ShakingGroup>
 
-      <CameraController target={cameraTarget} zoom={cameraZoom} />
+      <CameraController target={cameraTarget} closeUp={constructingPlotIdx !== null} />
       <OrbitControls
         enablePan={false}
-        enableZoom={!constructingId}
-        maxPolarAngle={Math.PI / 2.2}
-        minPolarAngle={Math.PI / 6}
-        minDistance={8}
-        maxDistance={22}
+        enableZoom={true}
+        maxPolarAngle={Math.PI / 2.5}
+        minPolarAngle={Math.PI / 4.5}
+        minDistance={9}
+        maxDistance={16}
         target={[cameraTarget[0], cameraTarget[1], cameraTarget[2]]}
-        autoRotate={!constructingId}
-        autoRotateSpeed={0.3}
+        autoRotate={constructingPlotIdx === null}
+        autoRotateSpeed={0.25}
       />
     </Canvas>
   );

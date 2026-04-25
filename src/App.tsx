@@ -17,7 +17,8 @@ import {
   VolumeX,
   Hammer,
 } from 'lucide-react';
-import { Scene3D } from './Scene3D';
+import { Scene3D, type PlotData } from './Scene3D';
+import { LifeMode } from './LifeMode';
 
 // ============================================================================
 //  AUDIO ENGINE — Web Audio API for SFX + speechSynthesis for voice
@@ -157,7 +158,7 @@ class AudioFX {
   }
 }
 
-const audio = new AudioFX();
+export const audio = new AudioFX();
 
 // Pre-warm voices list (Chrome loads them async)
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -175,15 +176,16 @@ type BuildingId = 'maktab' | 'shifoxona' | 'yollar' | 'chiroqlar' | 'bogcha';
 type BuildingStatus = 'qurilmagan' | 'qurilyapti' | 'alo' | 'shikastlangan' | 'vayrona';
 type Phase =
   | 'start'
+  | 'idle'                 // city visible, player can click any empty plot
   | 'chapter-intro'
   | 'pitch'
   | 'reaction'
-  | 'building'             // interactive QURISH minigame
-  | 'celebration'          // 1.8s after each build
-  | 'time-passes'          // "1 YIL O'TDI" cinematic (after all 5 done)
-  | 'living-city'          // citizens walk, no UI overlay
-  | 'incident-report'      // citizen brings report of victim
-  | 'disaster-cinematic'   // big quake/flood (only if any corrupt)
+  | 'building'
+  | 'celebration'
+  | 'time-passes'
+  | 'living-city'
+  | 'incident-report'
+  | 'disaster-cinematic'
   | 'disaster-modal'
   | 'ai-judge'
   | 'game-over';
@@ -267,6 +269,36 @@ const BUILDING_EMOJI: Record<BuildingId, string> = {
   bogcha: '🧸',
 };
 
+const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; benefit: string }> = {
+  maktab: {
+    tagline: "500 nafar bola uchun ta'lim maskani",
+    cost: '~2 000 – 4 000 tanga',
+    benefit: 'Bilim, kelajak, ish o\'rinlari',
+  },
+  shifoxona: {
+    tagline: 'Sog\'liqni saqlash — minglab odamlar uchun',
+    cost: '~2 500 – 4 500 tanga',
+    benefit: 'Hayotlar saqlanadi, shifo',
+  },
+  yollar: {
+    tagline: "Shahar yo'llari — ulanish, harakat, savdo",
+    cost: '~1 800 – 3 500 tanga',
+    benefit: 'Tezlik, xavfsizlik, iqtisod',
+  },
+  chiroqlar: {
+    tagline: "Tunda yorug'lik — bolalar maktabdan xavfsiz qaytadi",
+    cost: '~1 200 – 2 500 tanga',
+    benefit: 'Xavfsizlik, qulaylik',
+  },
+  bogcha: {
+    tagline: "Eng kichik fuqarolar uchun — onalar tinch",
+    cost: '~1 500 – 3 000 tanga',
+    benefit: "Bolalar, oilalar, tarbiya",
+  },
+};
+
+const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'yollar', 'chiroqlar', 'bogcha'];
+
 const BUILD_COMPLETE_VOICE: Record<BuildingId, string> = {
   maktab: "Tabriklaymiz! Maktab qurib bo'ldi.",
   shifoxona: 'Shifoxona ishga tushdi!',
@@ -295,7 +327,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Maktabda devor uvalanib tushdi',
     message:
-      "Hokim, mening qizim Munisa — 6-sinfda. Bugun darsda maktabning yuqori qavat devoridan bezakli bloklar uvalanib, ikkita o'quvchining boshiga to'kildi. Munisa shifoxonada — yorug'lik o'tkazgan jarohat. Hokim, men sizdan bir narsani so'rayman: nega g'isht arzon edi? Kim aybdor bunda?",
+      "Akangiz, mening qizim Munisa — 6-sinfda. Bugun darsda maktabning yuqori qavat devoridan bezakli bloklar uvalanib, ikkita o'quvchining boshiga to'kildi. Munisa shifoxonada — yorug'lik o'tkazgan jarohat. Akangiz, men sizdan bir narsani so'rayman: nega g'isht arzon edi? Kim aybdor bunda?",
     voiceLine: "Mening qizim maktabda jarohatlandi.",
   },
   shifoxona: {
@@ -308,7 +340,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Shifoxona uskunasidan noto\'g\'ri tashxis',
     message:
-      "Hokim, mening akam shifoxonada davolanardi. Yangi olingan rentgen apparati 3 marta xato natija ko'rsatdi. Akamga yurak xastaligi yo'q deyishdi, uyga qaytdi. Bir hafta keyin... uyda yiqilib tushdi. Hozir reanimatsiyada. Hokim, bu uskunalar haqiqatdan ham sertifikatlangan edimi?",
+      "Akangiz, mening akam shifoxonada davolanardi. Yangi olingan rentgen apparati 3 marta xato natija ko'rsatdi. Akamga yurak xastaligi yo'q deyishdi, uyga qaytdi. Bir hafta keyin... uyda yiqilib tushdi. Hozir reanimatsiyada. Bu uskunalar haqiqatdan ham sertifikatlangan edimi?",
     voiceLine: "Akam noto'g'ri tashxis oldi va ahvoli og'ir.",
   },
   yollar: {
@@ -321,7 +353,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Yangi yo\'lda mashinalar ag\'darilmoqda',
     message:
-      "Hokim, men 20 yildan beri taksi haydayman. Yangi qurilgan yo'lda — bor-yo'g'i 4 oy bo'ldi-ku — chuqurlar paydo bo'ldi, ba'zi joylarda asfalt o'pirilib tushgan. Bugun ertalab yo'lovchimning oilasi mashinada... chuqurga tushdik, uloqib ketdik. Yo'lovchimning qo'li singan, ikki bola yig'lab turibdi. Hokim, bu qanday qurilgan yo'l?",
+      "Akangiz, men 20 yildan beri taksi haydayman. Yangi qurilgan yo'lda — bor-yo'g'i 4 oy bo'ldi-ku — chuqurlar paydo bo'ldi, ba'zi joylarda asfalt o'pirilib tushgan. Bugun ertalab yo'lovchimning oilasi mashinada... chuqurga tushdik, uloqib ketdik. Yo'lovchimning qo'li singan, ikki bola yig'lab turibdi. Bu qanday qurilgan yo'l?",
     voiceLine: "Yo'lda chuqurlar paydo bo'ldi, mashina ag'darildi.",
   },
   chiroqlar: {
@@ -334,7 +366,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Qorong\'i ko\'chada bola yo\'qoldi',
     message:
-      "Hokim, men 6-sinfda o'qiyman. Kechqurun mashg'ulotlardan keyin maktabdan qaytaman. Yangi LED chiroqlar yondi 2 hafta — keyin so'ndi. Kecha onam meni topa olmadi: men ko'chada notanish odamlarning oldidan o'tib, qorong'ida yo'qotgan edim. Politsiya 3 soat qidirdi. Hokim, agar chiroqlar yongan bo'lsa, men topilgan bo'lardim...",
+      "Akangiz, men 6-sinfda o'qiyman. Kechqurun mashg'ulotlardan keyin maktabdan qaytaman. Yangi LED chiroqlar yondi 2 hafta — keyin so'ndi. Kecha onam meni topa olmadi: men ko'chada notanish odamlarning oldidan o'tib, qorong'ida yo'qotgan edim. Politsiya 3 soat qidirdi. Agar chiroqlar yongan bo'lsa, men topilgan bo'lardim...",
     voiceLine: "Qorong'i ko'chada men yo'qoldim.",
   },
   bogcha: {
@@ -347,7 +379,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Bog\'cha devori yorildi, bolalar evakuatsiya qilindi',
     message:
-      "Hokim, men 25 yildan beri tarbiyachiman. Hech qachon bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar bilan o'ynayotgan edim — devor yorilib chiqdi. To'rt nafar 4-yashar bola devor yonida edi. Olloh saqladi — hech kim qattiq jarohatlanmadi, faqat qo'rqdik. Lekin bog'chani yopdik. Bolalar uyda. Onalar yig'layapti. Hokim, agar zilzila kelsa-chi?",
+      "Akangiz, men 25 yildan beri tarbiyachiman. Hech qachon bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar bilan o'ynayotgan edim — devor yorilib chiqdi. To'rt nafar 4-yashar bola devor yonida edi. Olloh saqladi — hech kim qattiq jarohatlanmadi, faqat qo'rqdik. Lekin bog'chani yopdik. Bolalar uyda. Onalar yig'layapti. Agar zilzila kelsa-chi?",
     voiceLine: "Bog'cha devorlari yorildi, bolalar qo'rqdi.",
   },
 };
@@ -397,41 +429,41 @@ const SCENARIOS: Scenario[] = [
   {
     id: 1, buildingId: 'maktab', npc: NPCS.karim,
     setting: 'Maktab qurilish maydonida...',
-    pitch: "Hokim, salom! Maktab uchun materiallar bo'yicha menda ikki taklif bor. Ehtiyotkorlik bilan tinglang — ikkalasini ham vijdonim bilan aytaman.",
+    pitch: "Sarmoyador, salom! Maktab uchun materiallar bo'yicha menda ikki taklif bor. Ehtiyotkorlik bilan tinglang — ikkalasini ham vijdonim bilan aytaman.",
     options: [
       {
         text: "Toshkentdan sertifikatlangan, sifatli g'isht olib kelaman. Loyihaga to'liq amal qilamiz, byudjetdan 4000 tanga ketadi. Bolalar uchun ishonchli bo'ladi.",
         cost: 4000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi qaror, hokim. Bolalar omonda. To'g'ri, byudjet biroz qattiqroq bo'ladi, lekin shahar bunga arziydi.",
+        reaction: "Yaxshi qaror, sarmoyador. Bolalar omonda. To'g'ri, byudjet biroz qattiqroq bo'ladi, lekin shahar bunga arziydi.",
       },
       {
-        text: "Mendagi tanish — hududda arzon material yetkazadi. Byudjetdan 2000 tanga, qolgani sizga «minnatdorchilik» bo'lib qaytadi — 1500 tanga. G'ishtning farqini hech kim sezmaydi, hokim.",
+        text: "Mendagi tanish — hududda arzon material yetkazadi. Byudjetdan 2000 tanga, qolgani sizga «minnatdorchilik» bo'lib qaytadi — 1500 tanga. G'ishtning farqini hech kim sezmaydi, sarmoyador.",
         cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
-        reaction: "Mukammal! Bizning kelishuvimiz bor. Aqlli odam ekansiz hokim. Sizning hissangiz ertaga ertalab keladi. Ish boshlanaveradi.",
+        reaction: "Mukammal! Bizning kelishuvimiz bor. Aqlli odam ekansiz, sarmoyador. Sizning hissangiz ertaga ertalab keladi. Ish boshlanaveradi.",
       },
     ],
   },
   {
     id: 2, buildingId: 'shifoxona', npc: NPCS.bahodir,
-    setting: 'Hokimiyat qabulxonasida...',
-    pitch: "Hokim, shifoxona uchun asbob-uskunalar tanderi e'lon qilingan. Men bu sohada 15 yildan beri ishlayman. Sizga gapirib qo'yay...",
+    setting: 'Ofis qabulxonasida...',
+    pitch: "Sarmoyador, shifoxona uchun asbob-uskunalar tanderi e'lon qilingan. Men bu sohada 15 yildan beri ishlayman. Sizga gapirib qo'yay...",
     options: [
       {
         text: "Akangiz, men ham qatnashaman bu tanderda. Agar siz mening kompaniyamga afzallik bersangiz, sizga «rahmat» uchun 2000 tanga taqdim qilaman. Bizdan boshqa kim biladi?",
         cost: 2500, personalBonus: 2000, integrityChange: -30, isCorrupt: true,
-        reaction: "Ko'p rahmat hokim! Ikkimizning ham foydamiz bor. Pul bugun yetkazilmoqda. Asbob-uskunalar ham olib kelinadi — qattiq ishlatilmasa, bir necha yil chidaydi.",
+        reaction: "Ko'p rahmat, sarmoyador! Ikkimizning ham foydamiz bor. Pul bugun yetkazilmoqda. Asbob-uskunalar ham olib kelinadi — qattiq ishlatilmasa, bir necha yil chidaydi.",
       },
       {
         text: "Ochiq tanderda eng yaxshi taklifni tanlaymiz, sertifikatlar qattiq tekshiriladi. 4500 tanga ketadi, lekin uskunalar zamonaviy bo'ladi.",
         cost: 4500, integrityChange: 15, isCorrupt: false,
-        reaction: "Tushunarli, hokim. Adolatli o'ynaymiz. Eng yaxshi kompaniya yutib chiqsa, fuqarolar uchun yaxshi bo'ladi. Hujjatlarni tayyorlayman.",
+        reaction: "Tushunarli, sarmoyador. Adolatli o'ynaymiz. Eng yaxshi kompaniya yutib chiqsa, fuqarolar uchun yaxshi bo'ladi. Hujjatlarni tayyorlayman.",
       },
     ],
   },
   {
     id: 3, buildingId: 'yollar', npc: NPCS.otabek,
     setting: "Yo'l ustida...",
-    pitch: "Hokim, asfaltning standart qatlami 8 sm. Lekin men qishni hisoblab keldim — sizga bir taklifim bor.",
+    pitch: "Sarmoyador, asfaltning standart qatlami 8 sm. Lekin men qishni hisoblab keldim — sizga bir taklifim bor.",
     options: [
       {
         text: "Standartni saqlaymiz — 8 sm asfalt. 3500 tanga ketadi, lekin yo'l 10 yil chidaydi. Mashinalar xavfsiz yuradi.",
@@ -441,41 +473,41 @@ const SCENARIOS: Scenario[] = [
       {
         text: "5 sm bilan ham bo'ladi. Tekshiruvchilar yo'l yuzasini ko'radi xolos, qatlam qalinligini hech kim o'lchamaydi. 1800 tanga ketadi, qolgan 1200 — sizga. Bahor kelguncha hech kim sezmaydi.",
         cost: 1800, personalBonus: 1200, integrityChange: -30, isCorrupt: true,
-        reaction: "Bo'pti hokim, men ham bunga rozi. Tezroq tugatamiz, pul ham keladi. Bahorgacha hammasi joyida ko'rinadi.",
+        reaction: "Bo'pti, sarmoyador, men ham bunga rozi. Tezroq tugatamiz, pul ham keladi. Bahorgacha hammasi joyida ko'rinadi.",
       },
     ],
   },
   {
     id: 4, buildingId: 'chiroqlar', npc: NPCS.madina,
     setting: 'Importer ofisida...',
-    pitch: "Hokim, LED chiroqlari bo'yicha ikki turdagi mahsulot bor. Sizga ochiq aytaman, qaror sizniki.",
+    pitch: "Sarmoyador, LED chiroqlari bo'yicha ikki turdagi mahsulot bor. Sizga ochiq aytaman, qaror sizniki.",
     options: [
       {
         text: "Yevropadan haqiqiy sertifikatli LED. 15 yil chidaydi, kechqurun bolalar maktabdan xavfsiz qaytadi. 2500 tanga.",
         cost: 2500, integrityChange: 15, isCorrupt: false,
-        reaction: "Mukammal tanlov, hokim. Hujjatlarni tayyorlab keltiraman. Sizning ko'cha eng yorug' bo'ladi.",
+        reaction: "Mukammal tanlov, sarmoyador. Hujjatlarni tayyorlab keltiraman. Sizning ko'cha eng yorug' bo'ladi.",
       },
       {
         text: "Xitoydan arzon import. Sertifikat soxta, lekin tashqaridan farqi yo'q. 1200 tanga, qolgan 800 — sizga «haqq». Tekshiruvchilar quvvatni o'lchamaydi, ko'zga ko'rinishini ko'radi xolos.",
         cost: 1200, personalBonus: 800, integrityChange: -30, isCorrupt: true,
-        reaction: "Yaxshi, hokim. Ikkimizga ham foyda bor. Chiroqlar bir necha oy yonadi, qolgani — keyin gapiramiz.",
+        reaction: "Yaxshi, sarmoyador. Ikkimizga ham foyda bor. Chiroqlar bir necha oy yonadi, qolgani — keyin gapiramiz.",
       },
     ],
   },
   {
     id: 5, buildingId: 'bogcha', npc: NPCS.sardor,
     setting: "Bog'cha qurilish maydonida...",
-    pitch: "Hokim, bog'cha devorlari uchun armatura miqdorini hisobladim. Bir gapni aytishim kerak — bu o'rtamizdagi suhbat.",
+    pitch: "Sarmoyador, bog'cha devorlari uchun armatura miqdorini hisobladim. Bir gapni aytishim kerak — bu o'rtamizdagi suhbat.",
     options: [
       {
         text: "Armaturani 2 barobar kamaytirsak, devor turibdi-tursin. Bizning hududda zilzila qachondan kelgan? Tashqaridan loyiha bilan bir xil. 1500 tanga, qolgan 1000 — sizga keladi.",
         cost: 1500, personalBonus: 1000, integrityChange: -30, isCorrupt: true,
-        reaction: "Tushunarli hokim. Tezroq qurib bo'lamiz. Bolalar baribir ichida o'ynashadi — sezmaydilar.",
+        reaction: "Tushunarli, sarmoyador. Tezroq qurib bo'lamiz. Bolalar baribir ichida o'ynashadi — sezmaydilar.",
       },
       {
         text: "Loyihaga to'liq amal qilamiz. Armatura standart bo'yicha. 3000 tanga ketadi, lekin zilzila kelsa ham bog'cha tik turadi. Bolalar onalari uchun.",
         cost: 3000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi, hokim. To'g'ri qilasiz. Mehnatim qattiq, lekin men ham xotirjam ishlayman — bolalar omonda.",
+        reaction: "Yaxshi, sarmoyador. To'g'ri qilasiz. Mehnatim qattiq, lekin men ham xotirjam ishlayman — bolalar omonda.",
       },
     ],
   },
@@ -624,7 +656,7 @@ function skyColors(integrity: number) {
 //  TYPEWRITER
 // ============================================================================
 
-function TypewriterLine({
+export function TypewriterLine({
   text, delay = 0, speed = 22, onDone, dark = false,
 }: {
   text: string; delay?: number; speed?: number; onDone?: () => void; dark?: boolean;
@@ -637,16 +669,23 @@ function TypewriterLine({
   useEffect(() => {
     setShown(''); setDone(false);
     let i = 0;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     const start = setTimeout(() => {
-      const id = setInterval(() => {
+      intervalId = setInterval(() => {
         i += 1;
         setShown(text.slice(0, i));
         if (i >= text.length) {
-          clearInterval(id); setDone(true); onDoneRef.current?.();
+          if (intervalId) clearInterval(intervalId);
+          intervalId = null;
+          setDone(true);
+          onDoneRef.current?.();
         }
       }, speed);
     }, delay);
-    return () => clearTimeout(start);
+    return () => {
+      clearTimeout(start);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [text, delay, speed]);
 
   return (
@@ -2018,11 +2057,13 @@ function FriendBanner({ friend }: { friend: Friend }) {
 //  START / GAME OVER
 // ============================================================================
 
-function StartScreen({ onStart }: { onStart: () => void }) {
+function StartScreen({
+  onStartMayor, onStartLife,
+}: { onStartMayor: () => void; onStartLife: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-5 px-4 text-center"
+      className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-10 text-center"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -2036,19 +2077,61 @@ function StartScreen({ onStart }: { onStart: () => void }) {
       <h1 className="bg-gradient-to-br from-white to-yellow-300 bg-clip-text text-5xl font-black leading-none text-transparent sm:text-7xl">
         IntegrityCity
       </h1>
-      <div className="-mt-2 text-2xl font-extrabold text-white/90">Halollik shahri</div>
-      <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
-        Siz — yangi shaharning hokimisiz. Sizga 5 ta odam keladi va har biri bir taklif aytadi.
-        Diqqat bilan tinglang — chunki tanlovingizni ertaga shahar ko'taradi yoki to'laydi.
-      </p>
-      <motion.button
-        whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-        onClick={() => { audio.unlock(); audio.click(); onStart(); }}
-        className="rounded-2xl bg-yellow-400 px-8 py-4 text-lg font-black text-slate-900 shadow-2xl transition hover:bg-yellow-300"
-      >
-        🎮 O'yinni boshlash
-      </motion.button>
-      <div className="flex items-center gap-2 text-xs text-white/60">
+      <div className="-mt-3 text-xl font-extrabold text-white/90 sm:text-2xl">Halollik shahri</div>
+
+      <div className="text-center text-sm text-white/65 sm:text-base">
+        Qanday rejimda o'ynashni tanlang:
+      </div>
+
+      <div className="grid w-full max-w-4xl gap-4 sm:grid-cols-2">
+        {/* Mayor mode */}
+        <motion.button
+          whileHover={{ y: -6, scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { audio.unlock(); audio.click(); onStartMayor(); }}
+          className="group relative overflow-hidden rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-500/15 to-amber-700/5 p-6 text-left shadow-2xl transition hover:border-yellow-400/80 hover:bg-yellow-400/15"
+        >
+          <div className="text-6xl">💼</div>
+          <div className="mt-3 text-2xl font-black text-white">Sarmoyador rejimi</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-yellow-300">
+            5 inshoot · 3D shahar
+          </div>
+          <div className="mt-3 text-sm leading-relaxed text-white/80">
+            Siz — shaharga shaxsiy mablag' kiritayotgan tadbirkorsiz. Pudratchilar keladi va
+            takliflar aytadi. Halol yoki yengil yo'l — siz tanlaysiz. Vaqt o'tadi, fuqarolar
+            xabar olib keladi, oqibatlar chiqadi.
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-yellow-400 px-4 py-2 text-sm font-extrabold text-slate-900 transition group-hover:translate-x-1">
+            🎮 Sarmoyador sifatida boshlash
+            <ChevronRight className="h-4 w-4" />
+          </div>
+        </motion.button>
+
+        {/* Life mode */}
+        <motion.button
+          whileHover={{ y: -6, scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { audio.unlock(); audio.click(); onStartLife(); }}
+          className="group relative overflow-hidden rounded-3xl border-2 border-cyan-400/40 bg-gradient-to-br from-cyan-500/15 to-blue-700/5 p-6 text-left shadow-2xl transition hover:border-cyan-400/80 hover:bg-cyan-400/15"
+        >
+          <div className="text-6xl">🎒</div>
+          <div className="mt-3 text-2xl font-black text-white">Akbarning hayoti</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.25em] text-cyan-300">
+            5 dilemma · Haqiqiy hayot
+          </div>
+          <div className="mt-3 text-sm leading-relaxed text-white/80">
+            Siz — 12 yashar Akbar. Imtihon, sovg'a, otaning tanishi, do'stning siri,
+            ko'cha sotuvchisi. Korrupsiya har bosqichda — sizning tanlovingiz xarakterni
+            shakllantiradi.
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-extrabold text-slate-900 transition group-hover:translate-x-1">
+            🎒 Akbar sifatida boshlash
+            <ChevronRight className="h-4 w-4" />
+          </div>
+        </motion.button>
+      </div>
+
+      <div className="flex items-center gap-2 text-xs text-white/55">
         <MessageCircle className="h-3.5 w-3.5" /> Diqqat bilan o'qing — har gap ahamiyatga ega.
       </div>
     </motion.div>
@@ -2084,7 +2167,7 @@ function GameOverScreen({
   let title = ''; let body = ''; let emoji = '🏆'; let tone = ''; let voicePhrase = '';
   if (integrity >= 80 && ruined === 0) {
     title = 'Buyuk meros'; emoji = '🏆';
-    body = "Siz halol hokim bo'ldingiz. Sizning shahringiz farzandlarning farzandlariga yetadi.";
+    body = "Siz halol sarmoyador bo'ldingiz. Sizning shahringiz farzandlarning farzandlariga yetadi.";
     tone = 'border-emerald-400/50 from-emerald-500/20';
     voicePhrase = "Tabriklaymiz! Sizning shahringiz buyuk meros qoldirdi.";
   } else if (integrity >= 50 && ruined <= 1) {
@@ -2186,27 +2269,118 @@ function GameOverScreen({
 }
 
 // ============================================================================
+//  SUGGESTIONS PANEL — "Bu yerga nima qurmoqchisiz?"
+// ============================================================================
+
+function SuggestionsPanel({
+  plotIdx, builtIds, onPick, onClose,
+}: {
+  plotIdx: number;
+  builtIds: BuildingId[];
+  onPick: (id: BuildingId) => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ y: 240, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 240, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 240, damping: 26 }}
+      className="pointer-events-auto fixed inset-x-0 bottom-0 z-30 px-3 pb-4 sm:px-6 sm:pb-6"
+    >
+      <div className="mx-auto max-w-5xl rounded-3xl border-2 border-yellow-400/40 bg-slate-950/92 p-4 shadow-2xl backdrop-blur-md sm:p-5">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+              📍 Yer uchastkasi #{plotIdx + 1} · Bo'sh
+            </div>
+            <div className="mt-0.5 text-xl font-extrabold leading-tight text-white sm:text-2xl">
+              Bu yerga nima qurmoqchisiz?
+            </div>
+            <div className="mt-1 text-xs text-white/60">
+              Har bir tanlovga turli pudratchi keladi va o'z taklifini aytadi.
+            </div>
+          </div>
+          <button
+            onClick={() => { audio.click(); onClose(); }}
+            className="shrink-0 rounded-lg bg-white/10 p-2 text-white/70 transition hover:bg-white/20"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {ALL_BUILDING_IDS.map((id) => {
+            const built = builtIds.includes(id);
+            const sug = BUILDING_SUGGESTION[id];
+            return (
+              <motion.button
+                key={id}
+                whileHover={!built ? { y: -4, scale: 1.02 } : undefined}
+                whileTap={!built ? { scale: 0.97 } : undefined}
+                disabled={built}
+                onClick={() => { if (!built) { audio.click(); onPick(id); } }}
+                className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition ${
+                  built
+                    ? 'cursor-not-allowed border-white/10 bg-white/[0.03] opacity-50'
+                    : 'border-yellow-400/30 bg-yellow-400/[0.05] hover:border-yellow-400/70 hover:bg-yellow-400/[0.12]'
+                }`}
+              >
+                <div className="mb-2 text-4xl">{BUILDING_EMOJI[id]}</div>
+                <div className="text-base font-extrabold text-white">{BUILDING_NAME[id]}</div>
+                <div className="mt-1 text-[11px] leading-snug text-white/65">{sug.tagline}</div>
+                <div className="mt-2 flex flex-col gap-0.5 text-[10px]">
+                  <span className="text-yellow-300/80">💰 {sug.cost}</span>
+                  <span className="text-emerald-300/80">✓ {sug.benefit}</span>
+                </div>
+                {built && (
+                  <div className="absolute right-2 top-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    ✓ Qurildi
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
 //  MAIN APP
 // ============================================================================
 
 const CONSTRUCTION_MS = 3500;
 const CELEBRATION_MS = 1900;
 
+type GameMode = 'menu' | 'mayor' | 'life';
+
 export default function App() {
+  const [mode, setMode] = useState<GameMode>('menu');
   const [phase, setPhase] = useState<Phase>('start');
   const [budget, setBudget] = useState(10000);
   const [integrity, setIntegrity] = useState(100);
-  const [round, setRound] = useState(0);
   const [buildings, setBuildings] = useState<BuildingsMap>(FRESH_BUILDINGS);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [personalEarnings, setPersonalEarnings] = useState(0);
   const [muted, setMuted] = useState(false);
 
+  // Plot assignments — each index 0..4 holds a buildingId or null (empty plot)
+  const [plotAssignments, setPlotAssignments] = useState<(BuildingId | null)[]>(
+    [null, null, null, null, null],
+  );
+  // Which plot the user clicked (for suggestions panel + active construction)
+  const [selectedPlotIdx, setSelectedPlotIdx] = useState<number | null>(null);
+  // Currently-active scenario (driven by user's pick, not round counter)
+  const [currentBuildingId, setCurrentBuildingId] = useState<BuildingId | null>(null);
+  // Whether the suggestions panel is open
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+
   const [chosenIdx, setChosenIdx] = useState<number | null>(null);
   const [coinTrigger, setCoinTrigger] = useState(0);
 
   const [constructionProgress, setConstructionProgress] = useState(0);
-  // Player-driven build stage: 0 (foundation pending) → 1 (foundation) → 2 (walls) → 3 (roof complete)
   const [buildStage, setBuildStage] = useState(0);
 
   const [aiQuestions, setAiQuestions] = useState<string[]>([]);
@@ -2225,7 +2399,9 @@ export default function App() {
   const [reportQueue, setReportQueue] = useState<BuildingId[]>([]);
   const [reportIndex, setReportIndex] = useState(0);
 
-  const currentScenario = SCENARIOS[round];
+  const currentScenario = currentBuildingId
+    ? SCENARIOS.find((s) => s.buildingId === currentBuildingId) ?? null
+    : null;
   const displayBuildings = visitingFriend ? visitingFriend.buildings : buildings;
   const displayIntegrity = visitingFriend ? visitingFriend.integrity : integrity;
   const displayBudget = visitingFriend ? visitingFriend.budget : budget;
@@ -2234,15 +2410,75 @@ export default function App() {
   const buildingsRef = useRef(buildings);
   useEffect(() => { buildingsRef.current = buildings; }, [buildings]);
 
-  const constructingId = phase === 'building' && currentScenario ? currentScenario.buildingId : null;
+  // Built buildings = those non-null in plotAssignments AND not in qurilyapti state
+  const builtBuildingIds = useMemo(
+    () => plotAssignments.filter((b): b is BuildingId => b !== null),
+    [plotAssignments],
+  );
+  const builtCount = builtBuildingIds.filter((id) => buildings[id].status !== 'qurilyapti').length;
 
-  function startGame() {
+  // Plots view for the player's city
+  const playerPlots: PlotData[] = plotAssignments.map((bid) => ({
+    buildingId: bid,
+    state: bid ? buildings[bid] : { status: 'qurilmagan', isFragile: false },
+  }));
+  // Plots view for a friend's city — natural order
+  const friendPlots: PlotData[] = ALL_BUILDING_IDS.map((bid) => ({
+    buildingId: bid,
+    state: (visitingFriend?.buildings[bid] ?? { status: 'qurilmagan', isFragile: false }) as BuildingState,
+  }));
+  const displayPlots = visitingFriend ? friendPlots : playerPlots;
+
+  const constructingPlotIdx = phase === 'building' && selectedPlotIdx !== null ? selectedPlotIdx : null;
+
+  function startMayorMode() {
     audio.unlock();
-    setBudget(10000); setIntegrity(100); setRound(0);
+    setMode('mayor');
+    setBudget(10000); setIntegrity(100);
     setBuildings({ ...FRESH_BUILDINGS });
     setHistory([]); setPersonalEarnings(0);
     setChosenIdx(null); setDisaster(null);
     setVisitingFriend(null); setPendingScenarioForJudge(null);
+    setConstructionProgress(0);
+    setPlotAssignments([null, null, null, null, null]);
+    setSelectedPlotIdx(null);
+    setCurrentBuildingId(null);
+    setSuggestionsOpen(false);
+    setBuildStage(0);
+    setPhase('idle');
+  }
+
+  function startLifeMode() {
+    audio.unlock();
+    setMode('life');
+  }
+
+  function exitToMenu() {
+    setMode('menu');
+    setPhase('start');
+  }
+
+  function handlePlotClick(plotIdx: number) {
+    if (phase !== 'idle' || visitingFriend) return;
+    if (plotAssignments[plotIdx]) return;
+    audio.click();
+    setSelectedPlotIdx(plotIdx);
+    setSuggestionsOpen(true);
+  }
+
+  function pickBuildingForPlot(bid: BuildingId) {
+    if (selectedPlotIdx === null) return;
+    audio.click();
+    // Assign building to plot
+    setPlotAssignments((prev) => {
+      const next = [...prev];
+      next[selectedPlotIdx] = bid;
+      return next;
+    });
+    setCurrentBuildingId(bid);
+    setSuggestionsOpen(false);
+    setChosenIdx(null);
+    setBuildStage(0);
     setConstructionProgress(0);
     setPhase('chapter-intro');
   }
@@ -2405,15 +2641,19 @@ export default function App() {
   }
 
   function advanceRound() {
-    if (round + 1 >= SCENARIOS.length) {
-      // All 5 buildings done — let the city LIVE for a while, then check consequences
+    // Count how many plots are now occupied AND built (status === 'alo' or other final)
+    const occupied = plotAssignments.filter(Boolean).length;
+    if (occupied >= 5) {
+      // All 5 plots placed — let the city LIVE for a while, then check consequences
       setPhase('time-passes');
     } else {
-      setRound((r) => r + 1);
+      // Return to map for the next plot/building selection
+      setSelectedPlotIdx(null);
+      setCurrentBuildingId(null);
       setChosenIdx(null);
       setConstructionProgress(0);
       setBuildStage(0);
-      setPhase('chapter-intro');
+      setPhase('idle');
     }
   }
 
@@ -2445,8 +2685,10 @@ export default function App() {
         {displayIntegrity >= 50 ? '☀️' : '🌫️'}
       </motion.div>
 
-      {phase === 'start' ? (
-        <StartScreen onStart={startGame} />
+      {mode === 'life' ? (
+        <LifeMode onExit={exitToMenu} />
+      ) : phase === 'start' ? (
+        <StartScreen onStartMayor={startMayorMode} onStartLife={startLifeMode} />
       ) : phase === 'game-over' ? (
         <>
           <HUD
@@ -2459,8 +2701,8 @@ export default function App() {
           />
           <div className="fixed inset-0 z-0">
             <Scene3D
-              buildings={displayBuildings}
-              constructingId={null}
+              plots={visitingFriend ? friendPlots : playerPlots}
+              constructingPlotIdx={null}
               buildStage={3}
               shakeKey={shakeKey}
               skyColor={{ top: sky.top, bot: sky.bot }}
@@ -2470,14 +2712,14 @@ export default function App() {
             buildings={buildings} history={history}
             budget={budget} integrity={integrity}
             personalEarnings={personalEarnings}
-            onRestart={startGame}
+            onRestart={startMayorMode}
           />
         </>
       ) : (
         <>
           <HUD
             budget={displayBudget} integrity={displayIntegrity}
-            round={round} totalRounds={SCENARIOS.length}
+            round={builtCount} totalRounds={5}
             onVisitFriend={() => setFriendPickerOpen(true)}
             visitingFriend={visitingFriend}
             onBackHome={() => setVisitingFriend(null)}
@@ -2488,13 +2730,35 @@ export default function App() {
           {/* 3D city — full screen background */}
           <div className="fixed inset-0 z-0">
             <Scene3D
-              buildings={displayBuildings}
-              constructingId={constructingId}
+              plots={displayPlots}
+              constructingPlotIdx={constructingPlotIdx}
               buildStage={buildStage}
               shakeKey={shakeKey}
               skyColor={{ top: sky.top, bot: sky.bot }}
+              onPlotClick={phase === 'idle' && !visitingFriend ? handlePlotClick : undefined}
             />
           </div>
+
+          {/* Idle hint — invite the player to click a plot */}
+          {phase === 'idle' && !visitingFriend && !suggestionsOpen && (
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="pointer-events-none fixed inset-x-0 bottom-8 z-20 flex justify-center px-3"
+            >
+              <div className="rounded-2xl border-2 border-yellow-400/40 bg-slate-950/85 px-5 py-3 shadow-2xl backdrop-blur">
+                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
+                  Sizning shahringiz · {builtCount}/5 qurildi
+                </div>
+                <div className="text-base font-extrabold text-white sm:text-lg">
+                  📍 Bo'sh joyni tanlang — nima qurmoqchisiz?
+                </div>
+                <div className="text-xs text-white/65">
+                  Sariq «+» belgisini bosing, taklifingiz bo'lishi mumkin
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           <AIJudgeSprite />
 
@@ -2525,14 +2789,14 @@ export default function App() {
           <AnimatePresence mode="wait">
             {!visitingFriend && phase === 'chapter-intro' && currentScenario && (
               <ChapterIntro
-                key={`intro-${round}`}
+                key={`intro-${currentBuildingId}`}
                 scenario={currentScenario}
                 onDone={() => setPhase('pitch')}
               />
             )}
             {!visitingFriend && (phase === 'pitch' || phase === 'reaction') && currentScenario && (
               <PitchScene
-                key={`pitch-${round}-${phase}`}
+                key={`pitch-${currentBuildingId}-${phase}`}
                 scenario={currentScenario}
                 step={phase === 'pitch' ? 'pitch' : 'reaction'}
                 chosenIdx={chosenIdx}
@@ -2576,6 +2840,18 @@ export default function App() {
                 key="ai"
                 loading={aiLoading} questions={aiQuestions}
                 onAck={continueAfterJudge}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {suggestionsOpen && selectedPlotIdx !== null && !visitingFriend && (
+              <SuggestionsPanel
+                key="sugg"
+                plotIdx={selectedPlotIdx}
+                builtIds={builtBuildingIds}
+                onPick={pickBuildingForPlot}
+                onClose={() => { setSuggestionsOpen(false); setSelectedPlotIdx(null); }}
               />
             )}
           </AnimatePresence>
