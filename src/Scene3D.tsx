@@ -8,6 +8,7 @@ export type BuildingStatus =
   | 'qurilmagan'
   | 'qurilyapti'
   | 'alo'
+  | 'qulamoqda'      // actively collapsing — building visible falling
   | 'shikastlangan'
   | 'vayrona';
 
@@ -22,13 +23,15 @@ export type BuildingsMap = Record<BuildingId, BuildingState>;
 //  CITY CONSTANTS
 // ============================================================================
 
-// 5 plot positions on the city grid — closer to center and more visible
+// 5 plot positions — placed inside the 4 road quadrants + 1 bottom-center
+// Roads occupy x=±1.7±0.7 and z=±1.7±0.7 → safe zone is |x|>3.5, |z|>3.3
+// Houses at edges (x=±6 ish) so plots stay between road and house rows
 export const PLOT_POSITIONS: [number, number, number][] = [
-  [-4.5, 0, -2.5],  // top-left
-  [0, 0, -3.5],     // top-center
-  [4.5, 0, -2.5],   // top-right
-  [-2.5, 0, 3],     // bottom-left
-  [2.5, 0, 3],      // bottom-right
+  [-4.5, 0, -4.5],  // top-left quadrant
+  [4.5, 0, -4.5],   // top-right quadrant
+  [-4.5, 0, 4.5],   // bottom-left quadrant
+  [4.5, 0, 4.5],    // bottom-right quadrant
+  [0, 0, 5.5],      // bottom-center (clear of houses at z=6 — none at x=0)
 ];
 
 // Muted, realistic palette — less "lego" toy colors, more like real buildings
@@ -409,8 +412,25 @@ function House({
 
 // ── Buildings ────────────────────────────────────────────────────────────────
 
+// Smoke from fragile (corrupt) buildings — visible briefly after construction
+// then disappears. Pedagogical: corruption isn't visible from outside until disaster.
+function useFragileSmokeVisible(fragile: boolean, durationMs = 7000) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!fragile) {
+      setVisible(false);
+      return;
+    }
+    setVisible(true);
+    const t = setTimeout(() => setVisible(false), durationMs);
+    return () => clearTimeout(t);
+  }, [fragile, durationMs]);
+  return visible;
+}
+
 function FinishedSchool({ fragile }: { fragile: boolean }) {
   const palette = BUILDING_PALETTE.maktab;
+  const showSmoke = useFragileSmokeVisible(fragile);
   return (
     <group>
       {/* Stone foundation */}
@@ -481,13 +501,14 @@ function FinishedSchool({ fragile }: { fragile: boolean }) {
         <meshStandardMaterial color="#1e6b3a" side={THREE.DoubleSide} roughness={0.85} />
       </mesh>
       {!fragile && <Sparkles count={18} scale={[3, 2, 3]} size={2.5} speed={0.4} color="#fde68a" position={[0, 1.3, 0]} />}
-      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.6, 0]} />}
+      {fragile && showSmoke && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.6, 0]} />}
     </group>
   );
 }
 
 function FinishedHospital({ fragile }: { fragile: boolean }) {
   const p = BUILDING_PALETTE.shifoxona;
+  const showSmoke = useFragileSmokeVisible(fragile);
   return (
     <group>
       {/* Stone base */}
@@ -545,13 +566,14 @@ function FinishedHospital({ fragile }: { fragile: boolean }) {
         <meshStandardMaterial color="#5a5a5e" metalness={0.5} roughness={0.5} />
       </mesh>
       {!fragile && <Sparkles count={18} scale={[3, 2.5, 3]} size={2.5} speed={0.35} color="#dcd6c8" position={[0, 1.5, 0]} />}
-      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3, 0]} />}
+      {fragile && showSmoke && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3, 0]} />}
     </group>
   );
 }
 
 function FinishedKindergarten({ fragile }: { fragile: boolean }) {
   const p = BUILDING_PALETTE.bogcha;
+  const showSmoke = useFragileSmokeVisible(fragile);
   return (
     <group>
       <RoundedBox args={[2.0, 1.4, 1.6]} radius={0.1} position={[0, 0.7, 0]} castShadow>
@@ -575,13 +597,14 @@ function FinishedKindergarten({ fragile }: { fragile: boolean }) {
         <meshStandardMaterial color="#fbbf24" />
       </mesh>
       {!fragile && <Sparkles count={20} scale={[3, 2, 3]} size={3} speed={0.5} color="#fbcfe8" position={[0, 1, 0]} />}
-      {fragile && <Cloud opacity={0.5} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2, 0]} />}
+      {fragile && showSmoke && <Cloud opacity={0.5} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2, 0]} />}
     </group>
   );
 }
 
 function FinishedMosque({ fragile }: { fragile: boolean }) {
   const p = BUILDING_PALETTE.masjid;
+  const showSmoke = useFragileSmokeVisible(fragile);
   return (
     <group>
       {/* Foundation */}
@@ -638,12 +661,13 @@ function FinishedMosque({ fragile }: { fragile: boolean }) {
         <meshStandardMaterial color="#4a2818" roughness={0.95} />
       </mesh>
       {!fragile && <Sparkles count={20} scale={[3, 2.5, 3]} size={2.5} speed={0.3} color="#fde68a" position={[0, 1.8, 0]} />}
-      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3.2, 0]} />}
+      {fragile && showSmoke && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3.2, 0]} />}
     </group>
   );
 }
 
 function FinishedSportHall({ fragile }: { fragile: boolean }) {
+  const showSmoke = useFragileSmokeVisible(fragile);
   const p = BUILDING_PALETTE.sportzal;
   return (
     <group>
@@ -693,7 +717,7 @@ function FinishedSportHall({ fragile }: { fragile: boolean }) {
         <meshStandardMaterial color="#ea580c" />
       </mesh>
       {!fragile && <Sparkles count={18} scale={[3.5, 2, 3]} size={2.5} speed={0.4} color="#93c5fd" position={[0, 1.2, 0]} />}
-      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.2, 0]} />}
+      {fragile && showSmoke && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.2, 0]} />}
     </group>
   );
 }
@@ -790,8 +814,76 @@ function RisingDust({ count = 4 }: { count?: number }) {
   );
 }
 
+// COLLAPSING — building actively falling. Renders the still-intact building
+// but tilted, sinking, shaking violently, and emitting big dust clouds.
+function CollapsingBuilding({ buildingId }: { buildingId: BuildingId }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const startTime = useRef(Date.now());
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const elapsed = (Date.now() - startTime.current) / 1000;
+    const DURATION = 1.8;
+    if (elapsed < DURATION) {
+      const t = elapsed / DURATION;
+      // Gradually tilt to one side (fall over)
+      groupRef.current.rotation.z = -t * 0.7;
+      // Sink into ground
+      groupRef.current.position.y = -t * 0.6;
+      // Violent shake — peaks early then dies down
+      const shakeAmt = (1 - t * 0.5) * 0.18;
+      groupRef.current.position.x = Math.sin(elapsed * 35) * shakeAmt;
+      groupRef.current.position.z = Math.cos(elapsed * 32) * shakeAmt;
+    } else {
+      // Settled before transition to vayrona
+      groupRef.current.rotation.z = -0.7;
+      groupRef.current.position.set(0, -0.6, 0);
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Render the still-intact building but it's falling */}
+      {buildingId === 'maktab' && <FinishedSchool fragile={true} />}
+      {buildingId === 'shifoxona' && <FinishedHospital fragile={true} />}
+      {buildingId === 'bogcha' && <FinishedKindergarten fragile={true} />}
+      {buildingId === 'masjid' && <FinishedMosque fragile={true} />}
+      {buildingId === 'sportzal' && <FinishedSportHall fragile={true} />}
+
+      {/* Big dust clouds erupting */}
+      <Cloud opacity={0.65} speed={0.6} segments={12} bounds={[2.2, 0.8, 1.6]} position={[0, 0.8, 0]} />
+      <Cloud opacity={0.45} speed={0.5} segments={10} bounds={[2, 0.6, 1.4]} position={[0, 1.5, 0]} />
+      <Sparkles count={40} scale={[3, 2, 3]} size={3.5} speed={2} color="#a8a29e" position={[0, 1, 0]} />
+    </group>
+  );
+}
+
 function RuinedBuilding({ buildingId }: { buildingId: BuildingId }) {
   const palette = BUILDING_PALETTE[buildingId];
+  const groupRef = useRef<THREE.Group>(null);
+  const startTime = useRef(Date.now());
+
+  // Collapse-on-mount animation: rubble drops from height + shake settles
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const elapsed = (Date.now() - startTime.current) / 1000;
+    const COLLAPSE_DURATION = 1.8;
+    if (elapsed < COLLAPSE_DURATION) {
+      const t = elapsed / COLLAPSE_DURATION;
+      // Fall from above
+      groupRef.current.position.y = (1 - t) * 1.8;
+      // Violent shake during fall, decreasing
+      const shakeAmt = (1 - t) * 0.25;
+      groupRef.current.position.x = Math.sin(elapsed * 30) * shakeAmt;
+      groupRef.current.position.z = Math.cos(elapsed * 27) * shakeAmt * 0.7;
+      // Tilt
+      groupRef.current.rotation.z = Math.sin(elapsed * 18) * (1 - t) * 0.08;
+    } else {
+      groupRef.current.position.set(0, 0, 0);
+      groupRef.current.rotation.z = 0;
+    }
+  });
+
   // Random rubble pile (deterministic by buildingId for stability)
   const rubble = useMemo(() => {
     const seed = buildingId.charCodeAt(0);
@@ -815,7 +907,10 @@ function RuinedBuilding({ buildingId }: { buildingId: BuildingId }) {
   }, [buildingId]);
 
   return (
-    <group>
+    <group ref={groupRef}>
+      {/* Big initial dust burst on collapse */}
+      <Sparkles count={30} scale={[3, 1.5, 3]} size={3} speed={1.5} color="#a8a29e" position={[0, 0.6, 0]} />
+
       {/* Static rubble pile — bigger, more dramatic */}
       {rubble.map((r, i) => (
         <mesh key={i} position={r.p} rotation={r.r} castShadow>
@@ -1235,6 +1330,8 @@ function PlotNode({
     content = <ConstructionSite buildingId={plot.buildingId} stage={buildStage} fragile={plot.state.isFragile} />;
   } else if (plot.state.status === 'alo') {
     content = <FinishedBuilding buildingId={plot.buildingId} fragile={plot.state.isFragile} />;
+  } else if (plot.state.status === 'qulamoqda') {
+    content = <CollapsingBuilding buildingId={plot.buildingId} />;
   } else if (plot.state.status === 'shikastlangan') {
     content = <DamagedBuilding buildingId={plot.buildingId} />;
   } else if (plot.state.status === 'vayrona') {

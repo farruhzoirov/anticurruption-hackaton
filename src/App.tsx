@@ -183,7 +183,7 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 // ============================================================================
 
 type BuildingId = 'maktab' | 'shifoxona' | 'bogcha' | 'masjid' | 'sportzal';
-type BuildingStatus = 'qurilmagan' | 'qurilyapti' | 'alo' | 'shikastlangan' | 'vayrona';
+type BuildingStatus = 'qurilmagan' | 'qurilyapti' | 'alo' | 'qulamoqda' | 'shikastlangan' | 'vayrona';
 type Phase =
   | 'start'
   | 'idle'
@@ -193,9 +193,11 @@ type Phase =
   | 'building'
   | 'celebration'
   | 'blessing'             // citizens emerge with thanks (honest only)
+  | 'continue-prompt'      // after 3+ buildings: keep building or jump to time-passes?
   | 'time-passes'
   | 'living-city'
   | 'incident-report'
+  | 'collapsing'           // 3D city view, fragile buildings actively collapsing (no UI overlay)
   | 'disaster-cinematic'
   | 'disaster-modal'
   | 'ai-judge'
@@ -338,7 +340,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Maktabda devor uvalanib tushdi',
     message:
-      "Akangiz, mening qizim Munisa — 6-sinfda. Bugun darsda maktabning yuqori qavat devoridan bezakli bloklar uvalanib, ikkita o'quvchining boshiga to'kildi. Munisa shifoxonada — yorug'lik o'tkazgan jarohat. Akangiz, men sizdan bir narsani so'rayman: nega g'isht arzon edi? Kim aybdor bunda?",
+      "Akangiz, mening qizim Munisa 6-sinfda o'qiydi. Bugun darsda maktabning yuqori qavatidan g'isht uvalanib tushdi. Ikki bola jarohat oldi. Munisa hozir shifoxonada. Aytingchi — nega g'isht shunchalik arzon edi? Kim aybdor?",
     voiceLine: "Mening qizim maktabda jarohatlandi.",
   },
   shifoxona: {
@@ -351,7 +353,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Shifoxona uskunasidan noto\'g\'ri tashxis',
     message:
-      "Akangiz, mening akam shifoxonada davolanardi. Yangi olingan rentgen apparati 3 marta xato natija ko'rsatdi. Akamga yurak xastaligi yo'q deyishdi, uyga qaytdi. Bir hafta keyin... uyda yiqilib tushdi. Hozir reanimatsiyada. Bu uskunalar haqiqatdan ham sertifikatlangan edimi?",
+      "Akangiz, mening akam shifoxonada edi. Yangi asbob 3 marta xato natija ko'rsatdi. «Akangizda kasallik yo'q» deyishdi, uyga qaytdi. Bir hafta keyin uyda yiqilib tushdi. Hozir og'ir ahvolda. Asboblar yangi edimi yoki eski?",
     voiceLine: "Akam noto'g'ri tashxis oldi va ahvoli og'ir.",
   },
   bogcha: {
@@ -364,7 +366,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Bog\'cha devori yorildi, bolalar evakuatsiya qilindi',
     message:
-      "Akangiz, men 25 yildan beri tarbiyachiman. Hech qachon bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar bilan o'ynayotgan edim — devor yorilib chiqdi. To'rt nafar 4-yashar bola devor yonida edi. Olloh saqladi — hech kim qattiq jarohatlanmadi, faqat qo'rqdik. Lekin bog'chani yopdik. Bolalar uyda. Onalar yig'layapti. Agar zilzila kelsa-chi?",
+      "Akangiz, men 25 yildan beri bog'chada ishlayman. Bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar o'ynayotgan edi — devor birdan yorilib ketdi. 4 ta kichkina bola devor yonida edi. Xudo saqladi, jarohatlanmadi. Lekin bog'chani yopdik. Onalar yig'layapti. Agar zilzila kelsa nima bo'ladi?",
     voiceLine: "Bog'cha devorlari yorildi, bolalar qo'rqdi.",
   },
   masjid: {
@@ -377,7 +379,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: 'Masjid gumbazi yorildi, namozxonlar evakuatsiya qilindi',
     message:
-      "Akangiz, men 40 yildan beri shu mahallada yashayman. Bugun juma namozida gumbazdan g'isht tushdi. 200 nafar odam ichida edi. Olloh saqladi \u2014 faqat uch kishi yengil jarohatlandi. Lekin masjidni yopdik. Odamlar qo'rqmoqda. Agar zilzila kelsa \u2014 nima bo'lardi?",
+      "Akangiz, men 40 yildan beri shu mahallada yashayman. Bugun juma namozida masjid gumbazidan g'isht tushdi. Ichkarida 200 ga yaqin odam bor edi. Xudo saqladi \u2014 uch kishi yengil jarohat oldi. Hozir masjidni yopdik. Odamlar qo'rqmoqda. Agar zilzila kelsa nima bo'lar edi?",
     voiceLine: "Masjid gumbazi yorildi, odamlar qo'rqdi.",
   },
   sportzal: {
@@ -390,7 +392,7 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     },
     headline: "Sport zalda trenajyor sinib, o'smirga jarohat yetdi",
     message:
-      "Akangiz, men 15 yildan beri bolalarni sportga o'rgataman. Bugun 14 yashar Bobur trenajyorda mashq qilayotganda metall qismi sinib, oyog'iga tushdi. Hozir kasalxonada \u2014 operatsiya kerak. Bu jihozlar haqiqatan ham sertifikatlangan edimi? Nega sinadi?",
+      "Akangiz, men 15 yildan beri bolalarni sportga o'rgataman. Bugun 14 yoshli Bobur jihozda mashq qilayotgan edi \u2014 temir qismi sinib oyog'iga tushdi. Hozir shifoxonada, operatsiya bo'lyapti. Bu jihozlar yangi va sifatli edimi? Nega birdan sinadi?",
     voiceLine: "Trenajyor sinib, o'smir bolaga jarohat yetdi.",
   },
 };
@@ -440,85 +442,85 @@ const SCENARIOS: Scenario[] = [
   {
     id: 1, buildingId: 'maktab', npc: NPCS.karim,
     setting: 'Maktab qurilish maydonida...',
-    pitch: "Sarmoyador, salom! Maktab uchun materiallar bo'yicha menda ikki taklif bor. Ehtiyotkorlik bilan tinglang — ikkalasini ham vijdonim bilan aytaman.",
+    pitch: "Salom akangiz! Maktab uchun ikki xil g'isht bor. Sizga ikkalasini ham aytaman — qaysi birini olamiz?",
     options: [
       {
-        text: "Toshkentdan sertifikatlangan, sifatli g'isht olib kelaman. Loyihaga to'liq amal qilamiz, byudjetdan 4000 tanga ketadi. Bolalar uchun ishonchli bo'ladi.",
+        text: "Yaxshi, mustahkam g'isht. 4000 tanga ketadi. Maktab 50 yil turadi, bolalar omonda bo'ladi.",
         cost: 4000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi qaror, sarmoyador. Bolalar omonda. To'g'ri, byudjet biroz qattiqroq bo'ladi, lekin shahar bunga arziydi.",
+        reaction: "Yaxshi qildingiz akangiz. Bolalar omonda bo'ladi. Pul biroz ko'p ketadi, lekin yaxshi maktab bo'ladi.",
       },
       {
-        text: "Mendagi tanish — hududda arzon material yetkazadi. Byudjetdan 2000 tanga, qolgani sizga «minnatdorchilik» bo'lib qaytadi — 1500 tanga. G'ishtning farqini hech kim sezmaydi, sarmoyador.",
+        text: "Arzon g'isht ham bor — 2000 tanga. Qolgan 1500 tangani sizga «minnatdorchilik» qilib beraman. G'ishtning farqini hech kim sezmaydi.",
         cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
-        reaction: "Mukammal! Bizning kelishuvimiz bor. Aqlli odam ekansiz, sarmoyador. Sizning hissangiz ertaga ertalab keladi. Ish boshlanaveradi.",
+        reaction: "Zo'r akangiz! Aqlli odam ekansiz. Pulingiz ertaga ertalab keladi. Ish boshlanaveradi.",
       },
     ],
   },
   {
     id: 2, buildingId: 'shifoxona', npc: NPCS.bahodir,
     setting: 'Ofis qabulxonasida...',
-    pitch: "Sarmoyador, shifoxona uchun asbob-uskunalar tanderi e'lon qilingan. Men bu sohada 15 yildan beri ishlayman. Sizga gapirib qo'yay...",
+    pitch: "Akangiz, shifoxona uchun yangi asboblar kerak. Men 15 yildan beri shu ishdaman. Bir gap aytay sizga...",
     options: [
       {
-        text: "Akangiz, men ham qatnashaman bu tanderda. Agar siz mening kompaniyamga afzallik bersangiz, sizga «rahmat» uchun 2000 tanga taqdim qilaman. Bizdan boshqa kim biladi?",
+        text: "Akangiz, mening do'stimning kompaniyasi bor. Agar siz unga ish bersangiz, men sizga 2000 tanga «rahmat» beraman. Boshqa hech kim bilmaydi.",
         cost: 2500, personalBonus: 2000, integrityChange: -30, isCorrupt: true,
-        reaction: "Ko'p rahmat, sarmoyador! Ikkimizning ham foydamiz bor. Pul bugun yetkazilmoqda. Asbob-uskunalar ham olib kelinadi — qattiq ishlatilmasa, bir necha yil chidaydi.",
+        reaction: "Ko'p rahmat akangiz! Ikkimizga ham foyda bor. Pul bugun yetkaziladi. Asboblar eski, lekin bir necha yil ishlaydi.",
       },
       {
-        text: "Ochiq tanderda eng yaxshi taklifni tanlaymiz, sertifikatlar qattiq tekshiriladi. 4500 tanga ketadi, lekin uskunalar zamonaviy bo'ladi.",
+        text: "Ochiq tanlovda eng yaxshi kompaniyani topamiz. 4500 tanga ketadi — asboblar yangi va xavfsiz bo'ladi.",
         cost: 4500, integrityChange: 15, isCorrupt: false,
-        reaction: "Tushunarli, sarmoyador. Adolatli o'ynaymiz. Eng yaxshi kompaniya yutib chiqsa, fuqarolar uchun yaxshi bo'ladi. Hujjatlarni tayyorlayman.",
+        reaction: "Tushunarli akangiz. Adolatli ish qilamiz. Yaxshi kompaniya yutsa — fuqarolarga foyda. Hujjatlarni tayyorlayman.",
       },
     ],
   },
   {
     id: 3, buildingId: 'bogcha', npc: NPCS.sardor,
     setting: "Bog'cha qurilish maydonida...",
-    pitch: "Sarmoyador, bog'cha devorlari uchun armatura miqdorini hisobladim. Bir gapni aytishim kerak — bu o'rtamizdagi suhbat.",
+    pitch: "Akangiz, bog'cha devoriga temir kerak. Bir gap aytay — bu faqat o'rtamizda gap.",
     options: [
       {
-        text: "Armaturani 2 barobar kamaytirsak, devor turibdi-tursin. Bizning hududda zilzila qachondan kelgan? Tashqaridan loyiha bilan bir xil. 1500 tanga, qolgan 1000 — sizga keladi.",
+        text: "Temirni 2 baravar kamaytirsak ham devor turadi. Bizda zilzila qachondan kelmagan? 1500 tanga ketadi, qolgan 1000 — sizga keladi.",
         cost: 1500, personalBonus: 1000, integrityChange: -30, isCorrupt: true,
-        reaction: "Tushunarli, sarmoyador. Tezroq qurib bo'lamiz. Bolalar baribir ichida o'ynashadi — sezmaydilar.",
+        reaction: "Tushunarli akangiz. Tezroq qurib bo'lamiz. Bolalar baribir ichida o'ynashadi — bilmaydilar.",
       },
       {
-        text: "Loyihaga to'liq amal qilamiz. Armatura standart bo'yicha. 3000 tanga ketadi, lekin zilzila kelsa ham bog'cha tik turadi. Bolalar onalari uchun.",
+        text: "To'g'ri qilib quramiz. Temir to'liq bo'lsa, zilzila kelsa ham bog'cha qulamaydi. 3000 tanga ketadi.",
         cost: 3000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi, sarmoyador. To'g'ri qilasiz. Mehnatim qattiq, lekin men ham xotirjam ishlayman — bolalar omonda.",
+        reaction: "Yaxshi akangiz, to'g'ri qilasiz. Bolalar omonda bo'ladi. Men ham xotirjam ishlayman.",
       },
     ],
   },
   {
     id: 4, buildingId: 'masjid', npc: NPCS.anvar,
     setting: 'Masjid qurilish loyihasi muhokamasi...',
-    pitch: "Sarmoyador, assalomu alaykum! Masjid loyihasini ko'rib chiqdim. Poydevor va gumbaz bo'yicha ikki yo'l bor \u2014 diqqat bilan tinglang.",
+    pitch: "Assalomu alaykum akangiz! Masjid uchun ikki yo'l bor. Diqqat bilan tinglang.",
     options: [
       {
-        text: "Marmar poydevor, olovbardosh gumbaz va seysmik himoya tizimini to'liq qo'llaymiz. 5000 tanga ketadi, lekin masjid 100 yilga xizmat qiladi.",
+        text: "Mustahkam toshdan poydevor, sifatli gumbaz quramiz. 5000 tanga ketadi, lekin masjid 100 yilga turadi.",
         cost: 5000, integrityChange: 15, isCorrupt: false,
-        reaction: "Juda to'g'ri qaror, sarmoyador. Bu masjid avlodlarga meros bo'ladi. Alloh rizosiga yo'naltirilgan ish \u2014 barakali.",
+        reaction: "Juda to'g'ri qildingiz akangiz. Bu masjid avlodlarga meros bo'ladi. Halol ish \u2014 barakali.",
       },
       {
-        text: "Oddiy beton poydevor, yengil gumbaz \u2014 tashqaridan farqi yo'q. 2500 tanga, qolgan 1200 \u2014 sizga qaytadi. Hech kim bilmaydi.",
+        text: "Arzon material ishlatamiz \u2014 tashqaridan farqi bilinmaydi. 2500 tanga, qolgan 1200 \u2014 sizga qaytadi. Hech kim bilmaydi.",
         cost: 2500, personalBonus: 1200, integrityChange: -30, isCorrupt: true,
-        reaction: "Tushundim, sarmoyador. Tashqi ko'rinishi chiroyli bo'ladi. Faqat... ichki sifat haqida Alloh biladi.",
+        reaction: "Tushundim akangiz. Tashqaridan chiroyli ko'rinadi. Faqat... ichkarida nima bor — Alloh biladi.",
       },
     ],
   },
   {
     id: 5, buildingId: 'sportzal', npc: NPCS.dilshod,
     setting: "Sport zal jihozlari tanlash yig'ilishida...",
-    pitch: "Sarmoyador, salom! Sport zal uchun jihozlar buyurtma qilishimiz kerak. Ikki variant bor \u2014 ikkalasini ham vijdonim bilan aytaman.",
+    pitch: "Salom akangiz! Sport zal uchun jihoz kerak. Ikki taklif bor \u2014 qaysi birini olamiz?",
     options: [
       {
-        text: "Xalqaro sertifikatlangan trenajyorlar, professional pol qoplama, xavfsizlik tizimi \u2014 barchasi standart bo'yicha. 4000 tanga ketadi.",
+        text: "Sifatli, mustahkam jihozlar olamiz. Bolalar xavfsiz mashq qiladi. 4000 tanga ketadi.",
         cost: 4000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi, sarmoyador. Bolalar va yoshlar xavfsiz mashq qilishadi. Har bir trenajyor tekshirilgan va sertifikatlangan.",
+        reaction: "Yaxshi akangiz. Bolalar xavfsiz mashq qilishadi. Har bir jihoz tekshirilgan.",
       },
       {
-        text: "Xitoydan arzon trenajyorlar olib kelaman \u2014 tashqaridan professional ko'rinadi. 2000 tanga, qolgani sizga 1500 tanga bo'lib qaytadi.",
+        text: "Xitoydan arzon jihozlar olamiz \u2014 tashqaridan yaxshi ko'rinadi. 2000 tanga ketadi, qolgan 1500 \u2014 sizga qaytadi.",
         cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
-        reaction: "Kelishildi! Trenajyorlar yaxshi ko'rinadi, faqat... ko'p ishlatilsa, ba'zilari sinishi mumkin. Lekin kim biladi?",
+        reaction: "Kelishildi akangiz! Jihozlar tashqaridan chiroyli ko'rinadi. Faqat... ko'p ishlatilsa sinishi mumkin. Lekin kim biladi?",
       },
     ],
   },
@@ -586,24 +588,24 @@ const FRIENDS: Friend[] = [
 
 const MOCK_QUESTIONS: Record<BuildingId, string[]> = {
   maktab: [
-    "Bir o'ylab ko'ring — ertaga shu maktabga sizning farzandingiz bormoqchi bo'lsa, hozirgi qarordan xotirjam bo'larmidingiz?",
-    "Cho'ntakingizga tushgan tanga, 500 nafar bolaning xavfsizligidan qimmatroqmi?",
+    "Bir o'ylang — ertaga shu maktabda sizning ukangiz o'qisa, hozirgi qarordan xotirjam bo'larmidingiz?",
+    "Cho'ntakka tushgan pulingiz — 500 ta bolaning xavfsizligidan qimmatmi?",
   ],
   shifoxona: [
-    "Tasavvur qiling — bemor sizning onangiz. Eski uskunalar bilan unga tashxis qo'yilmoqda. Bu qaror hamon to'g'rimi?",
-    "Bir insonning umri qancha turadi? Olgan pulingiz o'sha umrdan ortiqmi?",
+    "Tasavvur qiling — bemor sizning onangiz. Eski asbob bilan unga tashxis qo'yilyapti. Bu qaror to'g'rimi?",
+    "Bir odamning hayoti qancha turadi? Olgan pulingiz shu hayotdan qimmatmi?",
   ],
   bogcha: [
-    "Zilzila kelsa, kuchsiz devorlar nimaga aylanadi? Va ostida qolgan bolalarning aybi bormi?",
-    "Sizning farzandingiz ertaga shu bog'chaga borsa, bugungi qarorni hamon haq deb hisoblarmidingiz?",
+    "Zilzila kelsa, kuchsiz devor nimaga aylanadi? Ostida qolgan bolalarning aybi bormi?",
+    "Sizning ukangiz ertaga shu bog'chaga borsa, bu qarorni hamon to'g'ri deb bilarmidingiz?",
   ],
   masjid: [
     "Masjidda namoz o'qiyotgan odamlar \u2014 sizning ota-onangiz bo'lishi mumkin. Agar gumbaz ular boshiga tushsa?",
-    "Alloh oldida javob berasiz \u2014 cho'ntakka tushgan tanga, ibodat uyining xavfsizligidan ustunmi?",
+    "Alloh oldida javob berasiz \u2014 cho'ntakka olgan pulingiz ibodat uyining xavfsizligidan ustunmi?",
   ],
   sportzal: [
-    "Tasavvur qiling \u2014 singan trenajyor ostida sizning farzandingiz yotibdi. Bu qaror hamon to'g'rimi?",
-    "Bir bolaning sog'lig'i \u2014 olgan pulingizdan qimmatroqmi yoki arzonroqmi?",
+    "Tasavvur qiling \u2014 singan jihoz ostida sizning ukangiz yotibdi. Bu qaror hamon to'g'rimi?",
+    "Bir bolaning sog'lig'i \u2014 olgan pulingizdan qimmatmi yoki arzonmi?",
   ],
 };
 
@@ -1409,9 +1411,9 @@ function BuildButton({
   buildingId: BuildingId; buildStage: number; onTap: () => void;
 }) {
   const stageLabels = [
-    'Poydevor quying',
-    "Devorlarni ko'taring",
-    'Tomni yoping',
+    "Poydevor qo'ying",
+    "Devorlarni qo'ying",
+    "Tomni yoping",
     'Tayyor!',
   ];
   const stageEmojis = ['🪨', '🧱', '🏠', '🎉'];
@@ -1497,8 +1499,8 @@ function BuildButton({
 
           <div className="mt-2 text-center text-[11px] text-white/60">
             {isDone
-              ? 'Inshoot tayyor — bir soniyada davom etamiz'
-              : `Tugmani bosing — bino o'sib boradi (${3 - buildStage} ta bosish qoldi)`}
+              ? "Bino tayyor — bir soniyada davom etamiz"
+              : `Tugmani bosing! Yana ${3 - buildStage} marta bosish kerak`}
           </div>
         </div>
       </motion.div>
@@ -1520,32 +1522,32 @@ interface BlessingData {
 const BLESSINGS: Record<BuildingId, BlessingData> = {
   maktab: {
     emojis: ['👨‍🏫', '👧', '👦', '👨‍👩‍👧'],
-    text: "500 nafar bola va ularning ota-onalari sizga rahmat aytmoqda. Allohdan baraka tilaymiz!",
-    voiceLine: "Sizga rahmat! Bolalarimiz xavfsiz o'qiydi.",
+    text: "500 ta bola va ularning ota-onalari sizga rahmat aytmoqda. Yaxshi maktab qurganingiz uchun raxmat!",
+    voiceLine: "Rahmat sizga! Bolalarimiz xavfsiz o'qiydi.",
     bonus: 800,
   },
   shifoxona: {
     emojis: ['👩‍⚕️', '👨‍⚕️', '🤰', '👴'],
-    text: "Shifokorlar va bemorlar shukur qilmoqda. Sizning ishingiz hayotlarni saqlaydi!",
-    voiceLine: "Sizga sog'lik tilaymiz! Bizning hayotimiz saqlandi.",
+    text: "Shifokorlar va bemorlar sizga rahmat aytmoqda. Yangi asboblar bilan ko'p odamning hayoti saqlanadi!",
+    voiceLine: "Sizga sog'lik tilaymiz! Hayotimiz saqlandi.",
     bonus: 900,
   },
   bogcha: {
     emojis: ['👶', '👩', '👨‍👩‍👧', '🧸'],
-    text: "Eng kichik fuqarolar va ularning onalari sizdan rozi. Allohdan kop baraka!",
-    voiceLine: "Bolalar omonda — sizga uzoq umr!",
+    text: "Kichkina bolalar va ularning onalari sizdan minnatdor. Mustahkam bog'cha qurganingiz uchun rahmat!",
+    voiceLine: "Bolalar omonda. Sizga uzoq umr!",
     bonus: 750,
   },
   masjid: {
     emojis: ['👳', '🧕', '👨‍👩‍👧‍👦', '🤲'],
-    text: "Mahalla aholisi va namozxonlar sizga duo qilmoqda. Bu masjid avlodlar uchun meros!",
-    voiceLine: "Alloh sizdan rozi bo'lsin! Masjidimiz mustahkam.",
+    text: "Mahalla aholisi sizga duo qilmoqda. Bu masjid avlodlarga meros bo'ladi!",
+    voiceLine: "Alloh sizdan rozi bo'lsin! Masjid mustahkam.",
     bonus: 850,
   },
   sportzal: {
     emojis: ['🏃', '⚽', '🤸', '👦'],
-    text: "Yoshlar va sportchilar sizga rahmat aytmoqda. Sog'lom avlod — kuchli davlat!",
-    voiceLine: "Rahmat! Bolalarimiz xavfsiz sport qilmoqda.",
+    text: "Yoshlar va sportchilar sizga rahmat. Sog'lom bolalar — kuchli kelajak!",
+    voiceLine: "Rahmat! Bolalar xavfsiz sport qilmoqda.",
     bonus: 800,
   },
 };
@@ -1671,6 +1673,69 @@ function BonusCoinBurst({ trigger }: { trigger: number }) {
   );
 }
 
+// ============================================================================
+//  CONTINUE PROMPT — after 3+ buildings, ask to continue or skip to time
+// ============================================================================
+
+function ContinuePrompt({
+  builtCount, total, onContinue, onStop,
+}: {
+  builtCount: number;
+  total: number;
+  onContinue: () => void;
+  onStop: () => void;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.7, y: 30 }} animate={{ scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+        className="w-full max-w-xl overflow-hidden rounded-3xl border-2 border-yellow-400/60 bg-gradient-to-br from-slate-900 to-slate-950 p-6 shadow-2xl"
+      >
+        <div className="mb-3 flex items-center gap-3">
+          <div className="text-5xl">🏗️</div>
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-yellow-300">
+              {builtCount}/{total} qurildi
+            </div>
+            <div className="text-2xl font-black text-white">
+              Yana qurmoqchimisiz?
+            </div>
+          </div>
+        </div>
+
+        <p className="text-base leading-relaxed text-white/85">
+          Sizda {builtCount} ta bino bor. Yana {total - builtCount} ta bo'sh joy. Yana qurasizmi yoki yillar o'tishini ko'rasizmi?
+        </p>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <motion.button
+            whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+            onClick={onContinue}
+            className="rounded-2xl bg-yellow-400 px-5 py-4 text-base font-extrabold text-slate-900 shadow-lg transition hover:bg-yellow-300"
+          >
+            ➕ Yana quraman
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+            onClick={onStop}
+            className="rounded-2xl bg-white/10 px-5 py-4 text-base font-extrabold text-white shadow-lg transition hover:bg-white/20 border-2 border-white/20"
+          >
+            ⏳ Bas, yillar o'tsin
+          </motion.button>
+        </div>
+
+        <div className="mt-3 text-center text-[11px] text-white/55">
+          Yillar o'tsa — qaroringiz qanday natija berganini ko'rasiz
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function CompletionBanner({ buildingId, isCorrupt }: {
   buildingId: BuildingId; isCorrupt: boolean;
 }) {
@@ -1692,13 +1757,13 @@ function CompletionBanner({ buildingId, isCorrupt }: {
         </motion.div>
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-300">
-            ✓ Inshoot tayyor
+            ✓ Bino tayyor
           </div>
           <div className="text-base font-extrabold text-white sm:text-lg">
             {BUILDING_NAME[buildingId]} qurib bo'ldi!
           </div>
           <div className="text-xs text-white/70">
-            {isCorrupt ? "Tashqaridan a'lo ko'rinadi..." : 'Mustahkam va ishonchli.'}
+            {isCorrupt ? "Tashqaridan chiroyli ko'rinadi..." : 'Mustahkam va ishonchli.'}
           </div>
         </div>
         <div className="text-3xl">✨</div>
@@ -1870,21 +1935,21 @@ const TIME_STAGES: { years: number; label: string; subtitle: string; voice: stri
   {
     years: 5,
     label: '5 YIL KEYIN',
-    subtitle: "Shahar yashayapti. Bolalar maktabga, odamlar ishga ketmoqda...",
+    subtitle: "Shahar yashayapti. Bolalar maktabga ketmoqda, odamlar ishga shoshmoqda...",
     voice: "Besh yil o'tdi.",
     durationMs: 3200,
   },
   {
     years: 10,
     label: '10 YIL KEYIN',
-    subtitle: "Birinchi yoriqlar paydo bo'ldi. Past sifatli inshootlar belgilarini ko'rsatmoqda...",
+    subtitle: "Birinchi yoriqlar paydo bo'ldi. Sifatsiz binolar belgi bera boshladi...",
     voice: "O'n yil o'tdi.",
     durationMs: 3500,
   },
   {
     years: 15,
     label: '15 YIL KEYIN',
-    subtitle: "Avlodlar yashashda davom etmoqda. Qaror oqibatlari endi to'liq ko'rinadi...",
+    subtitle: "Avlodlar yashayapti. Qaroringizning oqibati endi yaqqol ko'rinadi...",
     voice: "O'n besh yil o'tdi.",
     durationMs: 3800,
   },
@@ -2531,10 +2596,10 @@ function StartScreen({ onStart }: { onStart: () => void }) {
       <div className="-mt-3 text-xl font-extrabold text-white/90 sm:text-2xl">Halollik shahri</div>
 
       <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
-        Siz — shaharga shaxsiy mablag' kiritayotgan tadbirkor. Sizga 3 ta odam keladi va har biri taklif aytadi.
-        Halol qaror qabul qilsangiz — fuqarolar baraka tilaydi, bonus tushadi.
-        Yengil yo'lni tanlasangiz — yillar o'tib oqibatlari chiqadi.
-        Va sizning sherigingiz Otabek qarama-qarshi tanlov qiladi — kim oxirida g'oliblik ko'radi?
+        Siz — shahar uchun bino qurayotgan boy odamsiz. Sizga odamlar keladi va taklif aytadi.
+        Halol qarorda — fuqarolar duo qiladi, bonus pul keladi.
+        Yengil yo'lda — yillar o'tib bino qulashi mumkin.
+        Sherigingiz Otabek esa siz qiladigan tanlovning aksini qiladi — oxirida kim yutadi?
       </p>
 
       <motion.button
@@ -2584,20 +2649,20 @@ function GameOverScreen({
 
   let title = ''; let body = ''; let emoji = '🏆'; let tone = ''; let voicePhrase = '';
   if (integrity >= 80 && ruined === 0) {
-    title = 'Buyuk meros'; emoji = '🏆';
-    body = "Siz halol sarmoyador bo'ldingiz. Sizning shahringiz farzandlarning farzandlariga yetadi.";
+    title = "Buyuk meros"; emoji = '🏆';
+    body = "Siz halol odam bo'ldingiz! Sizning shahringiz uzoq yashaydi va farzandlaringizga ham qoladi.";
     tone = 'border-emerald-400/50 from-emerald-500/20';
-    voicePhrase = "Tabriklaymiz! Sizning shahringiz buyuk meros qoldirdi.";
+    voicePhrase = "Tabriklaymiz! Sizning shahringiz haqiqiy meros bo'ldi.";
   } else if (integrity >= 50 && ruined <= 1) {
-    title = "O'rtacha meros"; emoji = '⚖️';
-    body = "Shahar omon qoldi, lekin ba'zi joylarda darz ketdi.";
+    title = "O'rtacha shahar"; emoji = '⚖️';
+    body = "Shahar omon qoldi, lekin ba'zi joylarda muammolar ko'rindi. Halolroq bo'lsangiz bo'lardi.";
     tone = 'border-amber-400/50 from-amber-500/20';
-    voicePhrase = "Shahar omon qoldi, lekin yana yaxshilash mumkin edi.";
+    voicePhrase = "Shahar omon qoldi, lekin yana yaxshiroq qilsa bo'lar edi.";
   } else {
     title = "Qog'ozdan shahar"; emoji = '💀';
-    body = "Shahringiz tashqaridan a'lo ko'rinardi, ichi esa bo'sh edi. Korrupsiyaning narxini begunoh odamlar to'ladi.";
+    body = "Shahringiz tashqaridan chiroyli ko'rinardi, lekin ichi bo'sh edi. Korrupsiyaning oqibatini begunoh odamlar tortdi.";
     tone = 'border-rose-400/50 from-rose-500/20';
-    voicePhrase = "Sizning shahringiz vayronaga aylandi.";
+    voicePhrase = "Sizning shahringiz vayron bo'ldi.";
   }
 
   // Play victory or defeat once on mount
@@ -2767,13 +2832,13 @@ function RivalComparison({
   let verdict = '';
   let verdictTone = '';
   if (myIntegrity > otIntegrity + 20 && myRuined < otRuined) {
-    verdict = "Otabek bugungi pulni oldi — lekin sizning shahringiz davom etadi.";
+    verdict = "Otabek bugun ko'p pul oldi — lekin sizning shahringiz uzoq yashaydi.";
     verdictTone = 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
   } else if (otIntegrity > myIntegrity + 20 && otRuined < myRuined) {
-    verdict = "Otabek halol qoldi. Yillar o'tib, uning shahri yashayapti — sizniki qulagan.";
+    verdict = "Otabek halol qoldi. Uning shahri yashayapti — siznikini esa qulagan.";
     verdictTone = 'border-rose-400/40 bg-rose-500/10 text-rose-200';
   } else {
-    verdict = "Ikkalangizda ham ozgina farq bor — lekin har bir tanlov muhim.";
+    verdict = "Ikkalangiz o'rtasida farq oz — lekin har bir tanlov muhim.";
     verdictTone = 'border-amber-400/40 bg-amber-500/10 text-amber-200';
   }
 
@@ -3178,12 +3243,8 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // TIME-PASSES → LIVING-CITY (auto)
-  useEffect(() => {
-    if (phase !== 'time-passes') return;
-    const t = window.setTimeout(() => setPhase('living-city'), 3200);
-    return () => window.clearTimeout(t);
-  }, [phase]);
+  // TimePassesScene component handles its own 3-stage progression and calls
+  // onDone (= setPhase('living-city')) when all stages complete
 
   // LIVING-CITY → also silently collapse Otabek's fragile, then route player
   useEffect(() => {
@@ -3236,9 +3297,10 @@ export default function App() {
     const cost = affectedIds.length * 1200 + 600;
     const integrityHit = affectedIds.length * 15;
 
+    // First mark fragile buildings as 'qulamoqda' (actively collapsing)
     setBuildings((prev) => {
       const next = { ...prev };
-      affectedIds.forEach((id) => { next[id] = { status: 'vayrona', isFragile: false }; });
+      affectedIds.forEach((id) => { next[id] = { status: 'qulamoqda', isFragile: false }; });
       return next;
     });
     setBudget((b) => Math.max(0, b - cost));
@@ -3252,8 +3314,36 @@ export default function App() {
     // Use the LAST corrupt scenario for AI Judge context
     const lastCorruptScenario = SCENARIOS.find((s) => affectedIds.includes(s.buildingId));
     setPendingScenarioForJudge(lastCorruptScenario ?? null);
-    setPhase('disaster-cinematic');
+    // Show buildings actively collapsing (no overlay) before the cinematic title overlay
+    setPhase('collapsing');
   }
+
+  // COLLAPSING → buildings visibly fall over 1.8s → become vayrona → cinematic
+  useEffect(() => {
+    if (phase !== 'collapsing') return;
+    audio.disaster();
+
+    // After 1.8s of collapse animation, change qulamoqda → vayrona (rubble appears)
+    const tCollapseDone = window.setTimeout(() => {
+      setBuildings((prev) => {
+        const next = { ...prev };
+        (Object.keys(next) as BuildingId[]).forEach((id) => {
+          if (next[id].status === 'qulamoqda') {
+            next[id] = { status: 'vayrona', isFragile: false };
+          }
+        });
+        return next;
+      });
+    }, 1800);
+
+    // After 2.5s total, advance to disaster cinematic title overlay
+    const tCinematic = window.setTimeout(() => setPhase('disaster-cinematic'), 2500);
+
+    return () => {
+      window.clearTimeout(tCollapseDone);
+      window.clearTimeout(tCinematic);
+    };
+  }, [phase]);
 
   function continueAfterDisasterCinematic() { setPhase('disaster-modal'); }
 
@@ -3275,20 +3365,29 @@ export default function App() {
   }
 
   function advanceRound() {
-    // Count how many plots are now occupied AND built (status === 'alo' or other final)
     const occupied = plotAssignments.filter(Boolean).length;
     if (occupied >= ALL_BUILDING_IDS.length) {
-      // All 5 plots placed — let the city LIVE for a while, then check consequences
+      // All plots placed — let the city LIVE for a while, then check consequences
       setPhase('time-passes');
     } else {
-      // Return to map for the next plot/building selection
-      setSelectedPlotIdx(null);
-      setCurrentBuildingId(null);
-      setChosenIdx(null);
-      setConstructionProgress(0);
-      setBuildStage(0);
-      setPhase('idle');
+      // After every building, ask if player wants to continue or let years pass
+      setPhase('continue-prompt');
     }
+  }
+
+  function continueBuilding() {
+    audio.click();
+    setSelectedPlotIdx(null);
+    setCurrentBuildingId(null);
+    setChosenIdx(null);
+    setConstructionProgress(0);
+    setBuildStage(0);
+    setPhase('idle');
+  }
+
+  function stopBuilding() {
+    audio.click();
+    setPhase('time-passes');
   }
 
   function toggleMute() {
@@ -3364,7 +3463,7 @@ export default function App() {
             onVisitFriend={() => setFriendPickerOpen(true)}
             visitingFriend={visitingFriend}
             onBackHome={() => setVisitingFriend(null)}
-            hidden={phase === 'chapter-intro' || phase === 'disaster-cinematic'}
+            hidden={phase === 'chapter-intro' || phase === 'disaster-cinematic' || phase === 'collapsing'}
             muted={muted} onToggleMute={toggleMute}
           />
 
@@ -3390,7 +3489,7 @@ export default function App() {
             >
               <div className="rounded-2xl border-2 border-yellow-400/40 bg-slate-950/85 px-5 py-3 shadow-2xl backdrop-blur">
                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-yellow-300">
-                  Sizning shahringiz · {builtCount}/{ALL_BUILDING_IDS.length} qurildi
+                  Shahringiz · {builtCount}/{ALL_BUILDING_IDS.length} bino qurildi
                 </div>
                 <div className="text-base font-extrabold text-white sm:text-lg">
                   📍 Bo'sh joyni tanlang — nima qurmoqchisiz?
@@ -3431,6 +3530,15 @@ export default function App() {
                 key={`bless-${currentScenario.buildingId}`}
                 buildingId={currentScenario.buildingId}
                 onComplete={advanceRound}
+              />
+            )}
+            {phase === 'continue-prompt' && !visitingFriend && (
+              <ContinuePrompt
+                key="continue-prompt"
+                builtCount={builtCount}
+                total={ALL_BUILDING_IDS.length}
+                onContinue={continueBuilding}
+                onStop={stopBuilding}
               />
             )}
           </AnimatePresence>
