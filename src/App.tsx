@@ -284,40 +284,40 @@ const BUILDING_EMOJI: Record<BuildingId, string> = {
 
 const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; benefit: string }> = {
   maktab: {
-    tagline: "500 nafar bola uchun ta'lim maskani",
+    tagline: "500 nafar o'quvchi uchun ta'lim maskani",
     cost: '~2 000 – 4 000 tanga',
-    benefit: 'Bilim, kelajak, ish o\'rinlari',
+    benefit: "Sifatli ta'lim, porloq kelajak",
   },
   shifoxona: {
-    tagline: 'Sog\'liqni saqlash — minglab odamlar uchun',
+    tagline: 'Minglab insonlar salomatligi uchun markaz',
     cost: '~2 500 – 4 500 tanga',
-    benefit: 'Hayotlar saqlanadi, shifo',
+    benefit: "Sog'lom jamiyat, uzoq umr",
   },
   bogcha: {
-    tagline: "Eng kichik fuqarolar uchun — onalar tinch",
+    tagline: "Kichkintoylar uchun xavfsiz maskan",
     cost: '~1 500 – 3 000 tanga',
-    benefit: "Bolalar, oilalar, tarbiya",
+    benefit: "Farovon oila, mukammal tarbiya",
   },
   masjid: {
-    tagline: "Mahalla markazi — ibodat va birlik",
+    tagline: "Mahalla ahli uchun ibodat va ziyo maskani",
     cost: '~3 000 – 5 000 tanga',
-    benefit: "Ma'naviyat, jamoa, birlik",
+    benefit: "Yuksak ma'naviyat, ahil jamoa",
   },
   sportzal: {
-    tagline: "Yoshlar uchun sport va sog'lom turmush",
+    tagline: "Sog'lom turmush tarzi va yoshlar kelajagi",
     cost: '~2 000 – 4 000 tanga',
-    benefit: "Sog'liq, sport, yoshlar",
+    benefit: "Jismoniy chiniqish, chempionlar maskani",
   },
 };
 
 const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'bogcha', 'masjid', 'sportzal'];
 
 const BUILD_COMPLETE_VOICE: Record<BuildingId, string> = {
-  maktab: "Tabriklaymiz! Maktab qurib bo'ldi.",
-  shifoxona: 'Shifoxona ishga tushdi!',
-  bogcha: "Bog'cha tayyor!",
-  masjid: "Masjid qurilishi tugadi!",
-  sportzal: "Sport zal ochildi!",
+  maktab: "Tabriklaymiz! Maktab qurilishi muvaffaqiyatli yakunlandi.",
+  shifoxona: "Shifoxona to'liq ishga tushirildi va bemorlarni qabul qilishga tayyor!",
+  bogcha: "Bolajonlar uchun yangi bog'cha o'z eshiklarini ochdi!",
+  masjid: "Masjid qurilishi yakunlandi, namozxonlar uchun qulay sharoitlar yaratildi.",
+  sportzal: "Zamonaviy sport zali yoshlarimiz uchun foydalanishga topshirildi!",
 };
 
 // ── Citizen incident reports — one per corrupt building, shown after living-city ──
@@ -334,27 +334,27 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
     buildingId: 'maktab',
     citizen: {
       name: 'Oygul opa',
-      role: 'Maktab o\'quvchisining onasi',
+      role: 'O\'quvchining onasi',
       emoji: '👩‍🦰',
       bg: 'from-rose-700 via-rose-900 to-slate-950',
     },
-    headline: 'Maktabda devor uvalanib tushdi',
+    headline: 'Maktab devori qulab tushdi!',
     message:
-      "Akangiz, mening qizim Munisa 6-sinfda o'qiydi. Bugun darsda maktabning yuqori qavatidan g'isht uvalanib tushdi. Ikki bola jarohat oldi. Munisa hozir shifoxonada. Aytingchi — nega g'isht shunchalik arzon edi? Kim aybdor?",
-    voiceLine: "Mening qizim maktabda jarohatlandi.",
+      "Assalomu alaykum. Qizim Munisa 6-sinfda o'qiydi. Bugun dars paytida maktabning yuqori qavatidan sifatsiz g'ishtlar ko'chib tushdi. Ikki nafar o'quvchi jarohatlandi, qizim esa shifoxonada. Nega qurilishda arzon va sifatsiz materiallar ishlatildi? Bunga kim javob beradi?",
+    voiceLine: "Qizim maktabda jarohatlandi, arzon g'isht kimga kerak edi?",
   },
   shifoxona: {
     buildingId: 'shifoxona',
     citizen: {
       name: 'Hasan ota',
-      role: 'Bemor qarindoshi',
+      role: 'Bemorning qarindoshi',
       emoji: '👨‍🦳',
       bg: 'from-sky-700 via-blue-900 to-slate-950',
     },
-    headline: 'Shifoxona uskunasidan noto\'g\'ri tashxis',
+    headline: "Nosoz tibbiy uskunalar tufayli noto'g'ri tashxis!",
     message:
-      "Akangiz, mening akam shifoxonada edi. Yangi asbob 3 marta xato natija ko'rsatdi. «Akangizda kasallik yo'q» deyishdi, uyga qaytdi. Bir hafta keyin uyda yiqilib tushdi. Hozir og'ir ahvolda. Asboblar yangi edimi yoki eski?",
-    voiceLine: "Akam noto'g'ri tashxis oldi va ahvoli og'ir.",
+      "Hokim buva, akam yaqinda shifoxonaga borgan edi. Yangi deb maqtalgan uskunalar ketma-ket uch marta xato natija ko'rsatdi va akamni sog'lom deb uyga qaytarishdi. Bir haftadan so'ng ahvoli og'irlashib, yiqilib tushdi. Hozir reanimatsiyada. Ayting-chi, shifoxonaga haqiqatan ham sifatli uskunalar olinganmidi?",
+    voiceLine: "Sifatsiz uskunalar sabab akamning ahvoli og'irlashdi.",
   },
   bogcha: {
     buildingId: 'bogcha',
@@ -364,10 +364,10 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
       emoji: '👩‍🏫',
       bg: 'from-fuchsia-700 via-purple-900 to-slate-950',
     },
-    headline: 'Bog\'cha devori yorildi, bolalar evakuatsiya qilindi',
+    headline: "Bog'cha devorida yoriqlar, bolalar evakuatsiya qilindi!",
     message:
-      "Akangiz, men 25 yildan beri bog'chada ishlayman. Bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar o'ynayotgan edi — devor birdan yorilib ketdi. 4 ta kichkina bola devor yonida edi. Xudo saqladi, jarohatlanmadi. Lekin bog'chani yopdik. Onalar yig'layapti. Agar zilzila kelsa nima bo'ladi?",
-    voiceLine: "Bog'cha devorlari yorildi, bolalar qo'rqdi.",
+      "Men bu bog'chada 25 yildan beri ishlayman, lekin bunaqasini ko'rmaganman. Bugun ertalab bolalar o'ynab turganida devor chokidan yorilib ketdi! Xayriyatki, bolalarga shikast yetmadi, lekin bog'chani yopishga majbur bo'ldik. Oddiy kunda devor yorilsa, zilzila bo'lsa nima bo'ladi? Arzon armatura ishlatishga qanday vijdoningiz yo'l qo'ydi?!",
+    voiceLine: "Bog'cha devori yorilib ketdi, bolalar juda qo'rqib ketishdi!",
   },
   masjid: {
     buildingId: 'masjid',
@@ -377,10 +377,10 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
       emoji: '👳',
       bg: 'from-emerald-700 via-teal-900 to-slate-950',
     },
-    headline: 'Masjid gumbazi yorildi, namozxonlar evakuatsiya qilindi',
+    headline: 'Masjid gumbazidan toshlar quladi, namozxonlar xavf ostida!',
     message:
-      "Akangiz, men 40 yildan beri shu mahallada yashayman. Bugun juma namozida masjid gumbazidan g'isht tushdi. Ichkarida 200 ga yaqin odam bor edi. Xudo saqladi \u2014 uch kishi yengil jarohat oldi. Hozir masjidni yopdik. Odamlar qo'rqmoqda. Agar zilzila kelsa nima bo'lar edi?",
-    voiceLine: "Masjid gumbazi yorildi, odamlar qo'rqdi.",
+      "Men 40 yildan beri shu mahallada yashayman. Bugun Juma namozi paytida yangi masjidimizning gumbazidan toshlar ko'chib tushdi! Masjid ichida 200 ga yaqin odam bor edi, uch kishi jarohatlandi. Alloh saqladi, aks holda katta fojia bo'lardi. Nega Xudoning uyini qurishda ham xiyonat qildingiz?!",
+    voiceLine: "Juma namozi paytida masjid gumbazidan tosh quladi.",
   },
   sportzal: {
     buildingId: 'sportzal',
@@ -390,10 +390,10 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
       emoji: '👩\u200d🦱',
       bg: 'from-violet-700 via-purple-900 to-slate-950',
     },
-    headline: "Sport zalda trenajyor sinib, o'smirga jarohat yetdi",
+    headline: "Sport zalidagi sifatsiz trenajyor o'quvchini jarohatladi!",
     message:
-      "Akangiz, men 15 yildan beri bolalarni sportga o'rgataman. Bugun 14 yoshli Bobur jihozda mashq qilayotgan edi \u2014 temir qismi sinib oyog'iga tushdi. Hozir shifoxonada, operatsiya bo'lyapti. Bu jihozlar yangi va sifatli edimi? Nega birdan sinadi?",
-    voiceLine: "Trenajyor sinib, o'smir bolaga jarohat yetdi.",
+      "15 yildan beri bolalarga sportdan saboq beraman. Bugun 14 yoshli Bobur mashq qilayotganida, yangi trenajyorning temir qismi sinib, uning oyog'ini bosib qoldi. Hozir kasalxonada operatsiya bo'lyapti. Nega bolalar uchun mo'ljallangan maskanga eng arzon va xavfli jihozlarni olib keldingiz?",
+    voiceLine: "Sifatsiz trenajyor sinib, bolaning oyog'ini majruh qildi.",
   },
 };
 
@@ -442,85 +442,85 @@ const SCENARIOS: Scenario[] = [
   {
     id: 1, buildingId: 'maktab', npc: NPCS.karim,
     setting: 'Maktab qurilish maydonida...',
-    pitch: "Salom akangiz! Maktab uchun ikki xil g'isht bor. Sizga ikkalasini ham aytaman — qaysi birini olamiz?",
+    pitch: "Hokim buva, maktab uchun ikki xil g'isht bor. Shartlarini tushuntiraman — qaysi birini tanlaysiz?",
     options: [
       {
-        text: "Yaxshi, mustahkam g'isht. 4000 tanga ketadi. Maktab 50 yil turadi, bolalar omonda bo'ladi.",
+        text: "Sifatli, pishiq g'isht. 4000 tanga ketadi. Maktab 50 yil xizmat qiladi, bolalar xavfsiz o'qiydi.",
         cost: 4000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi qildingiz akangiz. Bolalar omonda bo'ladi. Pul biroz ko'p ketadi, lekin yaxshi maktab bo'ladi.",
+        reaction: "Yaxshi qaror. Bolalarning xavfsizligi hamma narsadan muhim. Biroz qimmat bo'lsa ham, sifatli maktab quramiz.",
       },
       {
-        text: "Arzon g'isht ham bor — 2000 tanga. Qolgan 1500 tangani sizga «minnatdorchilik» qilib beraman. G'ishtning farqini hech kim sezmaydi.",
+        text: "Arzon g'isht ham bor — 2000 tanga. Qolgan 1500 tangani sizga «xizmat haqi» qilib beraman. G'ishtning farqini hech kim sezmaydi.",
         cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
-        reaction: "Zo'r akangiz! Aqlli odam ekansiz. Pulingiz ertaga ertalab keladi. Ish boshlanaveradi.",
+        reaction: "Kelishdik! Siz juda oqil insonsiz. Pulingiz ertaga yetib boradi. Ishni boshlayveramiz.",
       },
     ],
   },
   {
     id: 2, buildingId: 'shifoxona', npc: NPCS.bahodir,
-    setting: 'Ofis qabulxonasida...',
-    pitch: "Akangiz, shifoxona uchun yangi asboblar kerak. Men 15 yildan beri shu ishdaman. Bir gap aytay sizga...",
+    setting: 'Hokimiyat qabulxonasida...',
+    pitch: "Hokim buva, shifoxonaga yangi tibbiy uskunalar kerak. Men 15 yildan beri shu sohadaman. Sizga bir maslahatim bor...",
     options: [
       {
-        text: "Akangiz, mening do'stimning kompaniyasi bor. Agar siz unga ish bersangiz, men sizga 2000 tanga «rahmat» beraman. Boshqa hech kim bilmaydi.",
+        text: "Mening tanishimning kompaniyasi bor. Agar pudratni unga bersangiz, sizga 2000 tanga «rahmatona» beramiz. Buni oramizda sir saqlaymiz.",
         cost: 2500, personalBonus: 2000, integrityChange: -30, isCorrupt: true,
-        reaction: "Ko'p rahmat akangiz! Ikkimizga ham foyda bor. Pul bugun yetkaziladi. Asboblar eski, lekin bir necha yil ishlaydi.",
+        reaction: "Rahmat sizga! Ikkimizga ham foydali ish bo'ldi. Uskunalar biroz eski, ammo bir necha yil ishlashiga kafolat beraman.",
       },
       {
-        text: "Ochiq tanlovda eng yaxshi kompaniyani topamiz. 4500 tanga ketadi — asboblar yangi va xavfsiz bo'ladi.",
+        text: "Ochiq tender o'tkazib, eng yaxshi kompaniyani tanlaymiz. 4500 tanga ketadi — lekin uskunalar yangi va ishonchli bo'ladi.",
         cost: 4500, integrityChange: 15, isCorrupt: false,
-        reaction: "Tushunarli akangiz. Adolatli ish qilamiz. Yaxshi kompaniya yutsa — fuqarolarga foyda. Hujjatlarni tayyorlayman.",
+        reaction: "To'g'ri qaror qabul qildingiz. Qonuniy va adolatli ish bo'ladi. Hujjatlarni rasmiylashtirishni boshlayman.",
       },
     ],
   },
   {
     id: 3, buildingId: 'bogcha', npc: NPCS.sardor,
     setting: "Bog'cha qurilish maydonida...",
-    pitch: "Akangiz, bog'cha devoriga temir kerak. Bir gap aytay — bu faqat o'rtamizda gap.",
+    pitch: "Hokim buva, bog'cha devoriga armatura olishimiz kerak. Buni faqat siz bilan men bilishimiz shart...",
     options: [
       {
-        text: "Temirni 2 baravar kamaytirsak ham devor turadi. Bizda zilzila qachondan kelmagan? 1500 tanga ketadi, qolgan 1000 — sizga keladi.",
+        text: "Armaturani ikki barobar tejab qolsak ham devor mustahkam turaveradi. Bizda zilzila qachon bo'lgan o'zi? 1500 tangaga bitiramiz, qolgan 1000 tanga — sizniki.",
         cost: 1500, personalBonus: 1000, integrityChange: -30, isCorrupt: true,
-        reaction: "Tushunarli akangiz. Tezroq qurib bo'lamiz. Bolalar baribir ichida o'ynashadi — bilmaydilar.",
+        reaction: "Tushunarli, hokim buva. Tezroq qurib bitkazamiz. Ichidagi bolalar baribir temir bor-yo'qligini tushunmaydi.",
       },
       {
-        text: "To'g'ri qilib quramiz. Temir to'liq bo'lsa, zilzila kelsa ham bog'cha qulamaydi. 3000 tanga ketadi.",
+        text: "Qurilish normalariga to'liq rioya qilamiz. Armaturani to'liq ishlatsak, zilzila kelsa ham bog'cha qulamaydi. Bunga 3000 tanga ketadi.",
         cost: 3000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi akangiz, to'g'ri qilasiz. Bolalar omonda bo'ladi. Men ham xotirjam ishlayman.",
+        reaction: "Adolatli qaror. Bolalarning hayoti xavf ostida qolmasligi kerak. Xotirjam ishimizni davom ettiramiz.",
       },
     ],
   },
   {
     id: 4, buildingId: 'masjid', npc: NPCS.anvar,
-    setting: 'Masjid qurilish loyihasi muhokamasi...',
-    pitch: "Assalomu alaykum akangiz! Masjid uchun ikki yo'l bor. Diqqat bilan tinglang.",
+    setting: 'Masjid loyihasi muhokamasida...',
+    pitch: "Assalomu alaykum, hokim buva. Masjid qurilishi bo'yicha ikkita taklifim bor. Diqqat bilan eshitib, qaror qabul qiling.",
     options: [
       {
-        text: "Mustahkam toshdan poydevor, sifatli gumbaz quramiz. 5000 tanga ketadi, lekin masjid 100 yilga turadi.",
+        text: "Mustahkam toshdan poydevor qo'yib, sifatli gumbaz quramiz. 5000 tanga sarflanadi, lekin masjid asrlar davomida xizmat qiladi.",
         cost: 5000, integrityChange: 15, isCorrupt: false,
-        reaction: "Juda to'g'ri qildingiz akangiz. Bu masjid avlodlarga meros bo'ladi. Halol ish \u2014 barakali.",
+        reaction: "Juda to'g'ri qildingiz. Bu masjid kelajak avlodlarga meros bo'lib qoladi. Halol mehnat — barakali bo'ladi.",
       },
       {
-        text: "Arzon material ishlatamiz \u2014 tashqaridan farqi bilinmaydi. 2500 tanga, qolgan 1200 \u2014 sizga qaytadi. Hech kim bilmaydi.",
+        text: "Arzon materiallardan foydalanamiz — tashqi ko'rinishidan umuman farq qilmaydi. 2500 tanga sarflaymiz, qolgan 1200 tangani sizga beraman. Buni hech kim bilmaydi.",
         cost: 2500, personalBonus: 1200, integrityChange: -30, isCorrupt: true,
-        reaction: "Tushundim akangiz. Tashqaridan chiroyli ko'rinadi. Faqat... ichkarida nima bor — Alloh biladi.",
+        reaction: "Tushundim. Tashqi tomondan juda chiroyli ko'rinadi. Ammo ichkaridagi zaiflikni faqat Yaratgan biladi...",
       },
     ],
   },
   {
     id: 5, buildingId: 'sportzal', npc: NPCS.dilshod,
-    setting: "Sport zal jihozlari tanlash yig'ilishida...",
-    pitch: "Salom akangiz! Sport zal uchun jihoz kerak. Ikki taklif bor \u2014 qaysi birini olamiz?",
+    setting: "Sport zal jihozlarini xarid qilishda...",
+    pitch: "Salom, hokim buva! Sport zali uchun jihozlar xarid qilishimiz kerak. Menda ikkita variant bor, qaysi birini ma'qul ko'rasiz?",
     options: [
       {
-        text: "Sifatli, mustahkam jihozlar olamiz. Bolalar xavfsiz mashq qiladi. 4000 tanga ketadi.",
+        text: "Sifatli va mustahkam jihozlar xarid qilamiz. Bolalar uchun mutlaqo xavfsiz bo'ladi. Bunga 4000 tanga kerak.",
         cost: 4000, integrityChange: 15, isCorrupt: false,
-        reaction: "Yaxshi akangiz. Bolalar xavfsiz mashq qilishadi. Har bir jihoz tekshirilgan.",
+        reaction: "Ajoyib qaror. Bolalar xavfsiz va sog'lom muhitda shug'ullanishadi. Barcha jihozlar tekshiruvdan o'tgan.",
       },
       {
-        text: "Xitoydan arzon jihozlar olamiz \u2014 tashqaridan yaxshi ko'rinadi. 2000 tanga ketadi, qolgan 1500 \u2014 sizga qaytadi.",
+        text: "Eng arzon jihozlarni olib kelamiz — ko'rinishi yangidek bo'ladi. 2000 tanga sarflaymiz, qolgan 1500 tangani o'zingizga qoldirasiz.",
         cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
-        reaction: "Kelishildi akangiz! Jihozlar tashqaridan chiroyli ko'rinadi. Faqat... ko'p ishlatilsa sinishi mumkin. Lekin kim biladi?",
+        reaction: "Kelishdik! Jihozlar tashqaridan juda yaltiroq ko'rinadi. Agar tez sinib qolsa, aybni bolalarning o'ziga to'nkaymiz.",
       },
     ],
   },
@@ -588,24 +588,24 @@ const FRIENDS: Friend[] = [
 
 const MOCK_QUESTIONS: Record<BuildingId, string[]> = {
   maktab: [
-    "Bir o'ylang — ertaga shu maktabda sizning ukangiz o'qisa, hozirgi qarordan xotirjam bo'larmidingiz?",
-    "Cho'ntakka tushgan pulingiz — 500 ta bolaning xavfsizligidan qimmatmi?",
+    "O'ylab ko'ring: ertaga shu maktabda o'z farzandingiz o'qisa, qabul qilgan qaroringizdan xotirjam bo'larmidingiz?",
+    "Cho'ntagingizga tushgan boylik 500 nafar bolaning hayoti va xavfsizligidan ustunmi?",
   ],
   shifoxona: [
-    "Tasavvur qiling — bemor sizning onangiz. Eski asbob bilan unga tashxis qo'yilyapti. Bu qaror to'g'rimi?",
-    "Bir odamning hayoti qancha turadi? Olgan pulingiz shu hayotdan qimmatmi?",
+    "Tasavvur qiling: ushbu shifoxonada eng yaqin insoningiz yotibdi. Noto'g'ri tashxis uning hayotiga zomin bo'lsa, vijdoningiz qiynalmaydimi?",
+    "Inson hayotining qadri qancha? Arzimagan pul deb insonlar taqdiri bilan o'ynashishga haqqingiz bormi?",
   ],
   bogcha: [
-    "Zilzila kelsa, kuchsiz devor nimaga aylanadi? Ostida qolgan bolalarning aybi bormi?",
-    "Sizning ukangiz ertaga shu bog'chaga borsa, bu qarorni hamon to'g'ri deb bilarmidingiz?",
+    "Tabiiy ofat yuz bersa, bu nimjon devorlar vayronaga aylanadi. Uning ostida qolgan begunoh bolalarda nima ayb?",
+    "Siz o'z jigarbandingizni shunday xavfli va omonat binoga ishonib topshirgan bo'larmidingiz?",
   ],
   masjid: [
-    "Masjidda namoz o'qiyotgan odamlar \u2014 sizning ota-onangiz bo'lishi mumkin. Agar gumbaz ular boshiga tushsa?",
-    "Alloh oldida javob berasiz \u2014 cho'ntakka olgan pulingiz ibodat uyining xavfsizligidan ustunmi?",
+    "Masjidda ibodat qilayotganlar orasida o'z yaqinlaringiz ham bo'lishi mumkin. Ular zarar ko'rsa, kim javob beradi?",
+    "Yaratganning uyini qurishda qilingan xiyonat uchun vijdoningiz oldida qanday javob berasiz?",
   ],
   sportzal: [
-    "Tasavvur qiling \u2014 singan jihoz ostida sizning ukangiz yotibdi. Bu qaror hamon to'g'rimi?",
-    "Bir bolaning sog'lig'i \u2014 olgan pulingizdan qimmatmi yoki arzonmi?",
+    "Tasavvur qiling: sifatsiz trenajyor sinib, o'z farzandingizni majruh qildi. Hali ham qabul qilgan qaroringizni to'g'ri deb hisoblaysizmi?",
+    "Yosh avlodning salomatligi sizning shaxsiy manfaatlaringizdan shunchalik qadrsizmi?",
   ],
 };
 
@@ -1522,32 +1522,32 @@ interface BlessingData {
 const BLESSINGS: Record<BuildingId, BlessingData> = {
   maktab: {
     emojis: ['👨‍🏫', '👧', '👦', '👨‍👩‍👧'],
-    text: "500 ta bola va ularning ota-onalari sizga rahmat aytmoqda. Yaxshi maktab qurganingiz uchun raxmat!",
-    voiceLine: "Rahmat sizga! Bolalarimiz xavfsiz o'qiydi.",
+    text: "500 nafar o'quvchi va ularning ota-onalari sizdan minnatdor. Sifatli va xavfsiz maktab qurganingiz uchun tashakkur!",
+    voiceLine: "Katta rahmat! Endi bolalarimiz xotirjam ta'lim olishadi.",
     bonus: 800,
   },
   shifoxona: {
     emojis: ['👩‍⚕️', '👨‍⚕️', '🤰', '👴'],
-    text: "Shifokorlar va bemorlar sizga rahmat aytmoqda. Yangi asboblar bilan ko'p odamning hayoti saqlanadi!",
-    voiceLine: "Sizga sog'lik tilaymiz! Hayotimiz saqlandi.",
+    text: "Barcha shifokorlar va bemorlar sizga minnatdorchilik bildirmoqda. Yangi uskunalar ko'plab insonlar hayotini saqlab qoladi!",
+    voiceLine: "Sizga sog'liq tilaymiz! Ko'p insonlar shifo topmoqda.",
     bonus: 900,
   },
   bogcha: {
     emojis: ['👶', '👩', '👨‍👩‍👧', '🧸'],
-    text: "Kichkina bolalar va ularning onalari sizdan minnatdor. Mustahkam bog'cha qurganingiz uchun rahmat!",
-    voiceLine: "Bolalar omonda. Sizga uzoq umr!",
+    text: "Barcha jajji bolajonlar va ularning ota-onalari sizdan juda minnatdor. Zilzilaga bardoshli, mustahkam bog'cha uchun rahmat!",
+    voiceLine: "Bolalarimiz xavfsiz joyda. Bor bo'ling!",
     bonus: 750,
   },
   masjid: {
     emojis: ['👳', '🧕', '👨‍👩‍👧‍👦', '🤲'],
-    text: "Mahalla aholisi sizga duo qilmoqda. Bu masjid avlodlarga meros bo'ladi!",
-    voiceLine: "Alloh sizdan rozi bo'lsin! Masjid mustahkam.",
+    text: "Keksa va yosh barcha mahalla ahli sizni duoyi xair qilmoqda. Mustahkam qilingan bu masjid kelajak avlodlarga katta meros bo'ladi!",
+    voiceLine: "Alloh sizdan rozi bo'lsin! Ibodatgohimiz xavfsiz va go'zal.",
     bonus: 850,
   },
   sportzal: {
     emojis: ['🏃', '⚽', '🤸', '👦'],
-    text: "Yoshlar va sportchilar sizga rahmat. Sog'lom bolalar — kuchli kelajak!",
-    voiceLine: "Rahmat! Bolalar xavfsiz sport qilmoqda.",
+    text: "Yoshlar va mahallamiz sportchilari sizga o'z tashakkurlarini aytishmoqda. Sog'lom va baquvvat avlod — bu kuchli davlat degani!",
+    voiceLine: "Katta rahmat! Yurtimizdan chempionlar yetishib chiqadi.",
     bonus: 800,
   },
 };
