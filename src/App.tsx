@@ -182,7 +182,7 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 //  TYPES
 // ============================================================================
 
-type BuildingId = 'maktab' | 'shifoxona' | 'bogcha';
+type BuildingId = 'maktab' | 'shifoxona' | 'bogcha' | 'masjid' | 'sportzal';
 type BuildingStatus = 'qurilmagan' | 'qurilyapti' | 'alo' | 'shikastlangan' | 'vayrona';
 type Phase =
   | 'start'
@@ -268,12 +268,16 @@ const BUILDING_NAME: Record<BuildingId, string> = {
   maktab: 'Maktab',
   shifoxona: 'Shifoxona',
   bogcha: "Bog'cha",
+  masjid: 'Masjid',
+  sportzal: 'Sport zal',
 };
 
 const BUILDING_EMOJI: Record<BuildingId, string> = {
   maktab: '🏫',
   shifoxona: '🏥',
   bogcha: '🧸',
+  masjid: '🕌',
+  sportzal: '🏟️',
 };
 
 const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; benefit: string }> = {
@@ -292,14 +296,26 @@ const BUILDING_SUGGESTION: Record<BuildingId, { tagline: string; cost: string; b
     cost: '~1 500 – 3 000 tanga',
     benefit: "Bolalar, oilalar, tarbiya",
   },
+  masjid: {
+    tagline: "Mahalla markazi — ibodat va birlik",
+    cost: '~3 000 – 5 000 tanga',
+    benefit: "Ma'naviyat, jamoa, birlik",
+  },
+  sportzal: {
+    tagline: "Yoshlar uchun sport va sog'lom turmush",
+    cost: '~2 000 – 4 000 tanga',
+    benefit: "Sog'liq, sport, yoshlar",
+  },
 };
 
-const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'bogcha'];
+const ALL_BUILDING_IDS: BuildingId[] = ['maktab', 'shifoxona', 'bogcha', 'masjid', 'sportzal'];
 
 const BUILD_COMPLETE_VOICE: Record<BuildingId, string> = {
   maktab: "Tabriklaymiz! Maktab qurib bo'ldi.",
   shifoxona: 'Shifoxona ishga tushdi!',
   bogcha: "Bog'cha tayyor!",
+  masjid: "Masjid qurilishi tugadi!",
+  sportzal: "Sport zal ochildi!",
 };
 
 // ── Citizen incident reports — one per corrupt building, shown after living-city ──
@@ -351,12 +367,40 @@ const INCIDENT_REPORTS: Record<BuildingId, IncidentReport> = {
       "Akangiz, men 25 yildan beri tarbiyachiman. Hech qachon bunday qo'rqinchli kunni ko'rmaganman. Bugun ertalab bolalar bilan o'ynayotgan edim — devor yorilib chiqdi. To'rt nafar 4-yashar bola devor yonida edi. Olloh saqladi — hech kim qattiq jarohatlanmadi, faqat qo'rqdik. Lekin bog'chani yopdik. Bolalar uyda. Onalar yig'layapti. Agar zilzila kelsa-chi?",
     voiceLine: "Bog'cha devorlari yorildi, bolalar qo'rqdi.",
   },
+  masjid: {
+    buildingId: 'masjid',
+    citizen: {
+      name: 'Abdulla aka',
+      role: 'Mahalla oqsoqoli',
+      emoji: '👳',
+      bg: 'from-emerald-700 via-teal-900 to-slate-950',
+    },
+    headline: 'Masjid gumbazi yorildi, namozxonlar evakuatsiya qilindi',
+    message:
+      "Akangiz, men 40 yildan beri shu mahallada yashayman. Bugun juma namozida gumbazdan g'isht tushdi. 200 nafar odam ichida edi. Olloh saqladi \u2014 faqat uch kishi yengil jarohatlandi. Lekin masjidni yopdik. Odamlar qo'rqmoqda. Agar zilzila kelsa \u2014 nima bo'lardi?",
+    voiceLine: "Masjid gumbazi yorildi, odamlar qo'rqdi.",
+  },
+  sportzal: {
+    buildingId: 'sportzal',
+    citizen: {
+      name: 'Nodira opa',
+      role: 'Sport murabbiyi',
+      emoji: '👩\u200d🦱',
+      bg: 'from-violet-700 via-purple-900 to-slate-950',
+    },
+    headline: "Sport zalda trenajyor sinib, o'smirga jarohat yetdi",
+    message:
+      "Akangiz, men 15 yildan beri bolalarni sportga o'rgataman. Bugun 14 yashar Bobur trenajyorda mashq qilayotganda metall qismi sinib, oyog'iga tushdi. Hozir kasalxonada \u2014 operatsiya kerak. Bu jihozlar haqiqatan ham sertifikatlangan edimi? Nega sinadi?",
+    voiceLine: "Trenajyor sinib, o'smir bolaga jarohat yetdi.",
+  },
 };
 
 const FRESH_BUILDINGS: BuildingsMap = {
   maktab: { status: 'qurilmagan', isFragile: false },
   shifoxona: { status: 'qurilmagan', isFragile: false },
   bogcha: { status: 'qurilmagan', isFragile: false },
+  masjid: { status: 'qurilmagan', isFragile: false },
+  sportzal: { status: 'qurilmagan', isFragile: false },
 };
 
 const NPCS: Record<string, NPC> = {
@@ -377,6 +421,18 @@ const NPCS: Record<string, NPC> = {
     bg: 'from-rose-700 via-red-800 to-rose-950',
     prop1: '🧱', prop2: '🔩',
     patternEmojis: ['🧱', '🔩', '⚙️', '🪨', '🧰'],
+  },
+  anvar: {
+    name: 'Anvar aka', role: 'Arxitektor', emoji: '👨‍🎨',
+    bg: 'from-emerald-700 via-teal-800 to-emerald-950',
+    prop1: '📐', prop2: '🕌',
+    patternEmojis: ['📐', '🧮', '🕌', '⭐', '🌙'],
+  },
+  dilshod: {
+    name: 'Dilshod aka', role: "Sport jihozlari ta'minotchisi", emoji: '🏋️',
+    bg: 'from-violet-700 via-purple-800 to-violet-950',
+    prop1: '🏀', prop2: '🏋️',
+    patternEmojis: ['🏀', '⚽', '🏋️', '🎾', '🏊'],
   },
 };
 
@@ -432,6 +488,40 @@ const SCENARIOS: Scenario[] = [
       },
     ],
   },
+  {
+    id: 4, buildingId: 'masjid', npc: NPCS.anvar,
+    setting: 'Masjid qurilish loyihasi muhokamasi...',
+    pitch: "Sarmoyador, assalomu alaykum! Masjid loyihasini ko'rib chiqdim. Poydevor va gumbaz bo'yicha ikki yo'l bor \u2014 diqqat bilan tinglang.",
+    options: [
+      {
+        text: "Marmar poydevor, olovbardosh gumbaz va seysmik himoya tizimini to'liq qo'llaymiz. 5000 tanga ketadi, lekin masjid 100 yilga xizmat qiladi.",
+        cost: 5000, integrityChange: 15, isCorrupt: false,
+        reaction: "Juda to'g'ri qaror, sarmoyador. Bu masjid avlodlarga meros bo'ladi. Alloh rizosiga yo'naltirilgan ish \u2014 barakali.",
+      },
+      {
+        text: "Oddiy beton poydevor, yengil gumbaz \u2014 tashqaridan farqi yo'q. 2500 tanga, qolgan 1200 \u2014 sizga qaytadi. Hech kim bilmaydi.",
+        cost: 2500, personalBonus: 1200, integrityChange: -30, isCorrupt: true,
+        reaction: "Tushundim, sarmoyador. Tashqi ko'rinishi chiroyli bo'ladi. Faqat... ichki sifat haqida Alloh biladi.",
+      },
+    ],
+  },
+  {
+    id: 5, buildingId: 'sportzal', npc: NPCS.dilshod,
+    setting: "Sport zal jihozlari tanlash yig'ilishida...",
+    pitch: "Sarmoyador, salom! Sport zal uchun jihozlar buyurtma qilishimiz kerak. Ikki variant bor \u2014 ikkalasini ham vijdonim bilan aytaman.",
+    options: [
+      {
+        text: "Xalqaro sertifikatlangan trenajyorlar, professional pol qoplama, xavfsizlik tizimi \u2014 barchasi standart bo'yicha. 4000 tanga ketadi.",
+        cost: 4000, integrityChange: 15, isCorrupt: false,
+        reaction: "Yaxshi, sarmoyador. Bolalar va yoshlar xavfsiz mashq qilishadi. Har bir trenajyor tekshirilgan va sertifikatlangan.",
+      },
+      {
+        text: "Xitoydan arzon trenajyorlar olib kelaman \u2014 tashqaridan professional ko'rinadi. 2000 tanga, qolgani sizga 1500 tanga bo'lib qaytadi.",
+        cost: 2000, personalBonus: 1500, integrityChange: -30, isCorrupt: true,
+        reaction: "Kelishildi! Trenajyorlar yaxshi ko'rinadi, faqat... ko'p ishlatilsa, ba'zilari sinishi mumkin. Lekin kim biladi?",
+      },
+    ],
+  },
 ];
 
 const CITY_TILES: Tile[] = [
@@ -462,6 +552,8 @@ const FRIENDS: Friend[] = [
       maktab: { status: 'alo', isFragile: false },
       shifoxona: { status: 'alo', isFragile: false },
       bogcha: { status: 'alo', isFragile: false },
+      masjid: { status: 'alo', isFragile: false },
+      sportzal: { status: 'alo', isFragile: false },
     },
   },
   {
@@ -471,6 +563,8 @@ const FRIENDS: Friend[] = [
       maktab: { status: 'vayrona', isFragile: false },
       shifoxona: { status: 'vayrona', isFragile: false },
       bogcha: { status: 'vayrona', isFragile: false },
+      masjid: { status: 'vayrona', isFragile: false },
+      sportzal: { status: 'vayrona', isFragile: false },
     },
   },
   {
@@ -480,6 +574,8 @@ const FRIENDS: Friend[] = [
       maktab: { status: 'alo', isFragile: false },
       shifoxona: { status: 'alo', isFragile: true },
       bogcha: { status: 'alo', isFragile: true },
+      masjid: { status: 'alo', isFragile: true },
+      sportzal: { status: 'alo', isFragile: false },
     },
   },
 ];
@@ -500,6 +596,14 @@ const MOCK_QUESTIONS: Record<BuildingId, string[]> = {
   bogcha: [
     "Zilzila kelsa, kuchsiz devorlar nimaga aylanadi? Va ostida qolgan bolalarning aybi bormi?",
     "Sizning farzandingiz ertaga shu bog'chaga borsa, bugungi qarorni hamon haq deb hisoblarmidingiz?",
+  ],
+  masjid: [
+    "Masjidda namoz o'qiyotgan odamlar \u2014 sizning ota-onangiz bo'lishi mumkin. Agar gumbaz ular boshiga tushsa?",
+    "Alloh oldida javob berasiz \u2014 cho'ntakka tushgan tanga, ibodat uyining xavfsizligidan ustunmi?",
+  ],
+  sportzal: [
+    "Tasavvur qiling \u2014 singan trenajyor ostida sizning farzandingiz yotibdi. Bu qaror hamon to'g'rimi?",
+    "Bir bolaning sog'lig'i \u2014 olgan pulingizdan qimmatroqmi yoki arzonroqmi?",
   ],
 };
 
@@ -1293,6 +1397,8 @@ function PitchScene({
   );
 }
 
+
+
 // ============================================================================
 //  CONSTRUCTION OVERLAY — banner during building phase
 // ============================================================================
@@ -1429,6 +1535,18 @@ const BLESSINGS: Record<BuildingId, BlessingData> = {
     text: "Eng kichik fuqarolar va ularning onalari sizdan rozi. Allohdan kop baraka!",
     voiceLine: "Bolalar omonda — sizga uzoq umr!",
     bonus: 750,
+  },
+  masjid: {
+    emojis: ['👳', '🧕', '👨‍👩‍👧‍👦', '🤲'],
+    text: "Mahalla aholisi va namozxonlar sizga duo qilmoqda. Bu masjid avlodlar uchun meros!",
+    voiceLine: "Alloh sizdan rozi bo'lsin! Masjidimiz mustahkam.",
+    bonus: 850,
+  },
+  sportzal: {
+    emojis: ['🏃', '⚽', '🤸', '👦'],
+    text: "Yoshlar va sportchilar sizga rahmat aytmoqda. Sog'lom avlod — kuchli davlat!",
+    voiceLine: "Rahmat! Bolalarimiz xavfsiz sport qilmoqda.",
+    bonus: 800,
   },
 };
 
@@ -2837,7 +2955,7 @@ export default function App() {
 
   // Plot assignments — each index 0..4 holds a buildingId or null (empty plot)
   const [plotAssignments, setPlotAssignments] = useState<(BuildingId | null)[]>(
-    [null, null, null],
+    [null, null, null, null, null],
   );
   // Which plot the user clicked (for suggestions panel + active construction)
   const [selectedPlotIdx, setSelectedPlotIdx] = useState<number | null>(null);
@@ -2917,7 +3035,7 @@ export default function App() {
     setChosenIdx(null); setDisaster(null);
     setVisitingFriend(null); setPendingScenarioForJudge(null);
     setConstructionProgress(0);
-    setPlotAssignments([null, null, null]);
+    setPlotAssignments([null, null, null, null, null]);
     setSelectedPlotIdx(null);
     setCurrentBuildingId(null);
     setSuggestionsOpen(false);
@@ -3224,6 +3342,7 @@ export default function App() {
               buildStage={3}
               shakeKey={shakeKey}
               skyColor={{ top: sky.top, bot: sky.bot }}
+              integrity={visitingFriend ? visitingFriend.integrity : integrity}
             />
           </div>
           <GameOverScreen
@@ -3257,6 +3376,7 @@ export default function App() {
               buildStage={buildStage}
               shakeKey={shakeKey}
               skyColor={{ top: sky.top, bot: sky.bot }}
+              integrity={visitingFriend ? visitingFriend.integrity : displayIntegrity}
               onPlotClick={phase === 'idle' && !visitingFriend ? handlePlotClick : undefined}
             />
           </div>

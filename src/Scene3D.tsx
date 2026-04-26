@@ -3,7 +3,7 @@ import { OrbitControls, RoundedBox, Sparkles, Cloud, ContactShadows } from '@rea
 import { useRef, useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 
-export type BuildingId = 'maktab' | 'shifoxona' | 'bogcha';
+export type BuildingId = 'maktab' | 'shifoxona' | 'bogcha' | 'masjid' | 'sportzal';
 export type BuildingStatus =
   | 'qurilmagan'
   | 'qurilyapti'
@@ -22,18 +22,22 @@ export type BuildingsMap = Record<BuildingId, BuildingState>;
 //  CITY CONSTANTS
 // ============================================================================
 
-// 3 plot positions on the city grid — triangular layout
+// 5 plot positions on the city grid — closer to center and more visible
 export const PLOT_POSITIONS: [number, number, number][] = [
-  [-3.5, 0, -3.5], // top-left
-  [3.5, 0, -3.5],  // top-right
-  [0, 0, 3.5],     // bottom-center
+  [-4.5, 0, -2.5],  // top-left
+  [0, 0, -3.5],     // top-center
+  [4.5, 0, -2.5],   // top-right
+  [-2.5, 0, 3],     // bottom-left
+  [2.5, 0, 3],      // bottom-right
 ];
 
 // Muted, realistic palette — less "lego" toy colors, more like real buildings
 const BUILDING_PALETTE: Record<BuildingId, { body: string; roof: string; window: string }> = {
-  maktab: { body: '#d4a574', roof: '#7c4419', window: '#1e3a5f' },     // school: warm beige + brown roof
-  shifoxona: { body: '#e8e4dc', roof: '#9b2c2c', window: '#3b6e8f' },  // hospital: off-white + dark red
-  bogcha: { body: '#c2839a', roof: '#7a3650', window: '#fef3c7' },     // kindergarten: muted pink
+  maktab: { body: '#d4a574', roof: '#7c4419', window: '#1e3a5f' },
+  shifoxona: { body: '#e8e4dc', roof: '#9b2c2c', window: '#3b6e8f' },
+  bogcha: { body: '#c2839a', roof: '#7a3650', window: '#fef3c7' },
+  masjid: { body: '#e8dcc8', roof: '#1a6b4a', window: '#c7a94e' },
+  sportzal: { body: '#b8c4d0', roof: '#2c3e6b', window: '#4a90b8' },
 };
 
 // Muted house palette — real-world building colors (terracotta, ochre, sage, taupe)
@@ -90,29 +94,34 @@ const TREE_POSITIONS: [number, number, number][] = [
 //  SUB-COMPONENTS — geometry pieces
 // ============================================================================
 
-function Ground() {
+function Ground({ integrity }: { integrity: number }) {
+  // Road color changes based on integrity
+  const roadColor = integrity < 40 ? '#1f1f22' : '#27272a';
+  // Grass color becomes duller if corrupt, brighter if honest
+  const grassColor = integrity < 40 ? '#5a6b4c' : integrity > 70 ? '#86a86f' : '#7a9266';
+
   return (
     <>
-      {/* Grass base — muted, more realistic green */}
+      {/* Grass base */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color="#7a9266" roughness={1} />
+        <planeGeometry args={[50, 50]} />
+        <meshStandardMaterial color={grassColor} roughness={1} />
       </mesh>
       {/* Sidewalks — visible concrete bands flanking each road */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, -2.65]}>
-        <planeGeometry args={[16, 0.5]} />
+        <planeGeometry args={[20, 0.5]} />
         <meshStandardMaterial color="#9c9a92" roughness={0.95} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.018, 2.65]}>
-        <planeGeometry args={[16, 0.5]} />
+        <planeGeometry args={[20, 0.5]} />
         <meshStandardMaterial color="#9c9a92" roughness={0.95} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.65, 0.018, 0]}>
-        <planeGeometry args={[0.5, 16]} />
+        <planeGeometry args={[0.5, 20]} />
         <meshStandardMaterial color="#9c9a92" roughness={0.95} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.65, 0.018, 0]}>
-        <planeGeometry args={[0.5, 16]} />
+        <planeGeometry args={[0.5, 20]} />
         <meshStandardMaterial color="#9c9a92" roughness={0.95} />
       </mesh>
     </>
@@ -193,59 +202,83 @@ function SwingingArm({ side, color }: { side: 1 | -1; color: string }) {
   );
 }
 
-function Roads() {
+function Roads({ integrity }: { integrity: number }) {
+  const roadColor = integrity < 40 ? '#1f1f22' : '#27272a';
+  const hasCracks = integrity < 40;
+
   return (
     <group>
       {/* Horizontal roads (X axis) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -1.7]}>
-        <planeGeometry args={[16, 1.4]} />
-        <meshStandardMaterial color="#27272a" />
+        <planeGeometry args={[20, 1.4]} />
+        <meshStandardMaterial color={roadColor} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 1.7]}>
-        <planeGeometry args={[16, 1.4]} />
-        <meshStandardMaterial color="#27272a" />
+        <planeGeometry args={[20, 1.4]} />
+        <meshStandardMaterial color={roadColor} />
       </mesh>
       {/* Vertical roads (Z axis) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1.7, 0.02, 0]}>
-        <planeGeometry args={[1.4, 16]} />
-        <meshStandardMaterial color="#27272a" />
+        <planeGeometry args={[1.4, 20]} />
+        <meshStandardMaterial color={roadColor} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[1.7, 0.02, 0]}>
-        <planeGeometry args={[1.4, 16]} />
-        <meshStandardMaterial color="#27272a" />
+        <planeGeometry args={[1.4, 20]} />
+        <meshStandardMaterial color={roadColor} />
       </mesh>
+
       {/* Lane markings */}
-      {Array.from({ length: 16 }).map((_, i) => (
+      {Array.from({ length: 20 }).map((_, i) => (
         <mesh
           key={`mh-${i}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[-7.5 + i * 1, 0.03, -1.7]}
+          position={[-9.5 + i * 1, 0.03, -1.7]}
         >
           <planeGeometry args={[0.3, 0.06]} />
           <meshStandardMaterial color="#facc15" />
         </mesh>
       ))}
-      {Array.from({ length: 16 }).map((_, i) => (
+      {Array.from({ length: 20 }).map((_, i) => (
         <mesh
           key={`mh2-${i}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[-7.5 + i * 1, 0.03, 1.7]}
+          position={[-9.5 + i * 1, 0.03, 1.7]}
         >
           <planeGeometry args={[0.3, 0.06]} />
           <meshStandardMaterial color="#facc15" />
         </mesh>
       ))}
+
+      {/* Cracks for corrupt city */}
+      {hasCracks && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2, 0.025, -1.5]}>
+            <planeGeometry args={[0.8, 0.05]} />
+            <meshStandardMaterial color="#111" />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0.5]} position={[3, 0.025, 1.8]}>
+            <planeGeometry args={[1.2, 0.06]} />
+            <meshStandardMaterial color="#111" />
+          </mesh>
+        </>
+      )}
     </group>
   );
 }
 
-function Tree({ position }: { position: [number, number, number] }) {
+function Tree({ position, integrity }: { position: [number, number, number]; integrity: number }) {
   const ref = useRef<THREE.Group>(null);
+  const isCorrupt = integrity < 40;
+  
   useFrame((_, delta) => {
     if (ref.current) {
       ref.current.rotation.z = Math.sin(Date.now() * 0.001 + position[0]) * 0.04;
     }
   });
+
+  const leafColor1 = isCorrupt ? '#8c8c46' : '#16a34a';
+  const leafColor2 = isCorrupt ? '#75753b' : '#15803d';
+
   return (
     <group ref={ref} position={position} castShadow>
       <mesh position={[0, 0.45, 0]} castShadow>
@@ -254,12 +287,65 @@ function Tree({ position }: { position: [number, number, number] }) {
       </mesh>
       <mesh position={[0, 1.4, 0]} castShadow>
         <coneGeometry args={[0.85, 1.7, 8]} />
-        <meshStandardMaterial color="#16a34a" />
+        <meshStandardMaterial color={leafColor1} />
       </mesh>
       <mesh position={[0, 1.85, 0]} castShadow>
         <coneGeometry args={[0.55, 1.0, 8]} />
-        <meshStandardMaterial color="#15803d" />
+        <meshStandardMaterial color={leafColor2} />
       </mesh>
+    </group>
+  );
+}
+
+// ============================================================================
+//  ENVIRONMENT DECORATIONS (Trash vs Flowers)
+// ============================================================================
+
+function EnvironmentDecorations({ integrity }: { integrity: number }) {
+  const isCorrupt = integrity < 40;
+  const isHonest = integrity > 70;
+
+  return (
+    <group>
+      {/* Trash for Corrupt City */}
+      {isCorrupt && (
+        <group>
+          <mesh position={[-3, 0.1, -1]} rotation={[0, 0.5, 0]} castShadow>
+            <boxGeometry args={[0.3, 0.2, 0.4]} />
+            <meshStandardMaterial color="#444" />
+          </mesh>
+          <mesh position={[5, 0.05, 2]} rotation={[0, 1.2, 0]} castShadow>
+            <boxGeometry args={[0.4, 0.1, 0.3]} />
+            <meshStandardMaterial color="#222" />
+          </mesh>
+          <mesh position={[0, 0.1, 5]} rotation={[0.2, 0, 0]} castShadow>
+            <boxGeometry args={[0.25, 0.25, 0.25]} />
+            <meshStandardMaterial color="#554" />
+          </mesh>
+        </group>
+      )}
+
+      {/* Flowers for Honest City */}
+      {isHonest && (
+        <group>
+          {[[-2, 6], [2, -7], [-7, 2], [7, 0]].map(([x, z], i) => (
+            <group key={i} position={[x, 0, z]}>
+              <mesh position={[-0.2, 0.05, 0]}>
+                <sphereGeometry args={[0.1, 6, 6]} />
+                <meshStandardMaterial color="#f43f5e" />
+              </mesh>
+              <mesh position={[0.2, 0.05, 0.1]}>
+                <sphereGeometry args={[0.08, 6, 6]} />
+                <meshStandardMaterial color="#fbbf24" />
+              </mesh>
+              <mesh position={[0, 0.05, -0.15]}>
+                <sphereGeometry args={[0.12, 6, 6]} />
+                <meshStandardMaterial color="#e879f9" />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )}
     </group>
   );
 }
@@ -494,9 +580,129 @@ function FinishedKindergarten({ fragile }: { fragile: boolean }) {
   );
 }
 
+function FinishedMosque({ fragile }: { fragile: boolean }) {
+  const p = BUILDING_PALETTE.masjid;
+  return (
+    <group>
+      {/* Foundation */}
+      <RoundedBox args={[2.4, 0.18, 2.0]} radius={0.02} position={[0, 0.09, 0]} castShadow>
+        <meshStandardMaterial color="#6e655a" roughness={0.95} />
+      </RoundedBox>
+      {/* Main body */}
+      <RoundedBox args={[2.2, 1.6, 1.8]} radius={0.06} position={[0, 1.0, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={p.body} roughness={0.8} metalness={0.05} />
+      </RoundedBox>
+      {/* Dome (gumbaz) */}
+      <mesh position={[0, 2.2, 0]} castShadow>
+        <sphereGeometry args={[0.85, 20, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={p.roof} roughness={0.7} metalness={0.1} />
+      </mesh>
+      {/* Crescent on top */}
+      <mesh position={[0, 3.0, 0]} castShadow>
+        <sphereGeometry args={[0.12, 12, 12]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 3.25, 0]} castShadow>
+        <cylinderGeometry args={[0.02, 0.02, 0.35, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.6} roughness={0.4} />
+      </mesh>
+      {/* Minaret (tower) */}
+      <mesh position={[1.3, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.18, 0.22, 3.0, 12]} />
+        <meshStandardMaterial color={p.body} roughness={0.85} />
+      </mesh>
+      <mesh position={[1.3, 3.15, 0]} castShadow>
+        <coneGeometry args={[0.25, 0.5, 12]} />
+        <meshStandardMaterial color={p.roof} roughness={0.7} />
+      </mesh>
+      {/* Arched windows */}
+      {[-0.6, 0, 0.6].map((x, i) => (
+        <group key={i} position={[x, 0.9, 0.91]}>
+          <mesh>
+            <planeGeometry args={[0.28, 0.45]} />
+            <meshStandardMaterial color="#3a2818" />
+          </mesh>
+          <mesh position={[0, 0.1, 0.005]}>
+            <circleGeometry args={[0.12, 16, 0, Math.PI]} />
+            <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.25} />
+          </mesh>
+          <mesh position={[0, -0.05, 0.005]}>
+            <planeGeometry args={[0.22, 0.28]} />
+            <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.2} />
+          </mesh>
+        </group>
+      ))}
+      {/* Door with arch */}
+      <mesh position={[0, 0.45, 0.91]}>
+        <planeGeometry args={[0.4, 0.7]} />
+        <meshStandardMaterial color="#4a2818" roughness={0.95} />
+      </mesh>
+      {!fragile && <Sparkles count={20} scale={[3, 2.5, 3]} size={2.5} speed={0.3} color="#fde68a" position={[0, 1.8, 0]} />}
+      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 3.2, 0]} />}
+    </group>
+  );
+}
+
+function FinishedSportHall({ fragile }: { fragile: boolean }) {
+  const p = BUILDING_PALETTE.sportzal;
+  return (
+    <group>
+      {/* Foundation */}
+      <RoundedBox args={[2.8, 0.15, 2.0]} radius={0.02} position={[0, 0.075, 0]} castShadow>
+        <meshStandardMaterial color="#6e655a" roughness={0.95} />
+      </RoundedBox>
+      {/* Main wide body */}
+      <RoundedBox args={[2.6, 1.4, 1.8]} radius={0.06} position={[0, 0.85, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={p.body} roughness={0.75} metalness={0.08} />
+      </RoundedBox>
+      {/* Curved roof */}
+      <mesh position={[0, 1.7, 0]} rotation={[0, 0, 0]} castShadow>
+        <boxGeometry args={[2.8, 0.18, 2.0]} />
+        <meshStandardMaterial color={p.roof} roughness={0.85} />
+      </mesh>
+      {/* Sport sign */}
+      <mesh position={[0, 1.3, 0.91]}>
+        <planeGeometry args={[0.8, 0.2]} />
+        <meshStandardMaterial color="#1c1917" />
+      </mesh>
+      {/* Large entrance */}
+      <mesh position={[0, 0.5, 0.91]}>
+        <planeGeometry args={[0.7, 0.85]} />
+        <meshStandardMaterial color="#2a3548" roughness={0.3} />
+      </mesh>
+      {/* Windows — large sport hall windows */}
+      {[-0.95, 0.95].map((x, i) => (
+        <group key={i} position={[x, 0.9, 0.91]}>
+          <mesh>
+            <planeGeometry args={[0.4, 0.6]} />
+            <meshStandardMaterial color="#3a2818" />
+          </mesh>
+          <mesh position={[0, 0, 0.005]}>
+            <planeGeometry args={[0.34, 0.54]} />
+            <meshStandardMaterial color={p.window} emissive={p.window} emissiveIntensity={0.2} roughness={0.25} />
+          </mesh>
+        </group>
+      ))}
+      {/* Basketball hoop on the side */}
+      <mesh position={[-1.4, 1.1, 0]} castShadow>
+        <boxGeometry args={[0.04, 0.6, 0.04]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} />
+      </mesh>
+      <mesh position={[-1.4, 1.4, 0.15]} castShadow>
+        <torusGeometry args={[0.12, 0.02, 8, 16]} />
+        <meshStandardMaterial color="#ea580c" />
+      </mesh>
+      {!fragile && <Sparkles count={18} scale={[3.5, 2, 3]} size={2.5} speed={0.4} color="#93c5fd" position={[0, 1.2, 0]} />}
+      {fragile && <Cloud opacity={0.45} speed={0.4} segments={8} bounds={[1.5, 0.5, 1]} position={[0, 2.2, 0]} />}
+    </group>
+  );
+}
+
 function FinishedBuilding({ buildingId, fragile }: { buildingId: BuildingId; fragile: boolean }) {
   if (buildingId === 'maktab') return <FinishedSchool fragile={fragile} />;
   if (buildingId === 'shifoxona') return <FinishedHospital fragile={fragile} />;
+  if (buildingId === 'masjid') return <FinishedMosque fragile={fragile} />;
+  if (buildingId === 'sportzal') return <FinishedSportHall fragile={fragile} />;
   return <FinishedKindergarten fragile={fragile} />;
 }
 
@@ -1092,8 +1298,8 @@ function CameraController({
   const { camera } = useThree();
 
   useFrame((_, dt) => {
-    // closeUp = constructing → zoom in low orbit; idle → tighter top-down
-    const offset = closeUp ? { x: 5, y: 6, z: 5 } : { x: 7, y: 11, z: 7 };
+    // closeUp = constructing → zoom in low orbit; idle → higher top-down for full city view
+    const offset = closeUp ? { x: 5, y: 6, z: 5 } : { x: 0, y: 15, z: 12 };
     camera.position.x = THREE.MathUtils.damp(camera.position.x, target[0] + offset.x, 1.6, dt);
     camera.position.y = THREE.MathUtils.damp(camera.position.y, target[1] + offset.y, 1.6, dt);
     camera.position.z = THREE.MathUtils.damp(camera.position.z, target[2] + offset.z, 1.6, dt);
@@ -1113,6 +1319,7 @@ interface Scene3DProps {
   buildStage: number;
   shakeKey: number;
   skyColor: { top: string; bot: string };
+  integrity: number;
   onPlotClick?: (plotIdx: number) => void;
 }
 
@@ -1145,6 +1352,7 @@ export function Scene3D({
   buildStage,
   shakeKey,
   skyColor,
+  integrity,
   onPlotClick,
 }: Scene3DProps) {
   const cameraTarget: [number, number, number] =
@@ -1153,12 +1361,12 @@ export function Scene3D({
   return (
     <Canvas
       shadows
-      camera={{ position: [8, 12, 8], fov: 30 }}
+      camera={{ position: [0, 15, 12], fov: 35 }}
       gl={{ antialias: true }}
       dpr={[1, 2]}
     >
       <color attach="background" args={[skyColor.top]} />
-      <fog attach="fog" args={[skyColor.bot, 14, 38]} />
+      <fog attach="fog" args={[skyColor.bot, 14, 45]} />
 
       <hemisphereLight args={[skyColor.top, '#7a9266', 0.55]} />
       <ambientLight intensity={0.32} />
@@ -1167,15 +1375,16 @@ export function Scene3D({
         intensity={1.15}
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-12}
-        shadow-camera-right={12}
-        shadow-camera-top={12}
-        shadow-camera-bottom={-12}
+        shadow-camera-left={-15}
+        shadow-camera-right={15}
+        shadow-camera-top={15}
+        shadow-camera-bottom={-15}
       />
 
       <ShakingGroup shakeKey={shakeKey}>
-        <Ground />
-        <Roads />
+        <Ground integrity={integrity} />
+        <Roads integrity={integrity} />
+        <EnvironmentDecorations integrity={integrity} />
 
         {plots.map((plot, i) => (
           <PlotNode
@@ -1194,7 +1403,7 @@ export function Scene3D({
         ))}
 
         {TREE_POSITIONS.map((p, i) => (
-          <Tree key={`t-${i}`} position={p} />
+          <Tree key={`t-${i}`} position={p} integrity={integrity} />
         ))}
 
         <Car axis="x" z={-1.85} speed={0.7} color="#a82828" />
@@ -1213,15 +1422,15 @@ export function Scene3D({
 
       <CameraController target={cameraTarget} closeUp={constructingPlotIdx !== null} />
       <OrbitControls
-        enablePan={false}
+        enablePan={true}
         enableZoom={true}
-        maxPolarAngle={Math.PI / 2.5}
-        minPolarAngle={Math.PI / 4.5}
-        minDistance={9}
-        maxDistance={16}
+        maxPolarAngle={Math.PI / 2.2}
+        minPolarAngle={Math.PI / 6}
+        minDistance={6}
+        maxDistance={25}
         target={[cameraTarget[0], cameraTarget[1], cameraTarget[2]]}
         autoRotate={constructingPlotIdx === null}
-        autoRotateSpeed={0.25}
+        autoRotateSpeed={0.15}
       />
     </Canvas>
   );
