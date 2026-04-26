@@ -407,7 +407,7 @@ const FRESH_BUILDINGS: BuildingsMap = {
 
 const NPCS: Record<string, NPC> = {
   karim: {
-    name: 'Karim aka', role: 'Pudratchi', emoji: '👷‍♂️',
+    name: 'Karim aka', role: 'Quruvchi', emoji: '👷‍♂️',
     bg: 'from-amber-700 via-orange-800 to-amber-950',
     prop1: '🏗️', prop2: '🪜',
     patternEmojis: ['🧱', '🔨', '⚒️', '🪛', '🪚'],
@@ -2952,7 +2952,7 @@ function SuggestionsPanel({
               Bu yerga nima qurmoqchisiz?
             </div>
             <div className="mt-1 text-xs text-white/60">
-              Har bir tanlovga turli pudratchi keladi va o'z taklifini aytadi.
+              Har bir tanlovga turli quruvchi keladi va o'z taklifini aytadi.
             </div>
           </div>
           <button
